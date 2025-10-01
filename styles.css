@@ -31,6 +31,14 @@
   flex: 0 0 auto;
 }
 
+.timeline-controls-center {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex: 1 1 auto;
+  justify-content: center;
+}
+
 .timeline-controls-right {
   display: flex;
   gap: 10px;
@@ -324,4 +332,94 @@
 .timeline-tooltip-link:hover {
   color: var(--link-color-hover);
   text-decoration: underline;
+}
+
+.timeline-zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px;
+  background: var(--background-primary);
+  border-radius: 6px;
+  border: 1px solid var(--background-modifier-border);
+}
+
+.timeline-zoom-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.timeline-zoom-slider-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+.timeline-zoom-slider {
+  width: 150px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--background-modifier-border);
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.timeline-zoom-slider::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--interactive-accent);
+  cursor: pointer;
+  border: 2px solid var(--background-primary);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s ease;
+}
+
+.timeline-zoom-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.timeline-zoom-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--interactive-accent);
+  cursor: pointer;
+  border: 2px solid var(--background-primary);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s ease;
+}
+
+.timeline-zoom-slider::-moz-range-thumb:hover {
+  transform: scale(1.2);
+}
+
+.timeline-zoom-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--background-modifier-border);
+}
+
+.timeline-zoom-slider::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--background-modifier-border);
+}
+
+.timeline-zoom-label {
+  font-size: 0.85em;
+  color: var(--text-muted);
+  font-weight: 500;
+  min-width: 45px;
+  text-align: center;
+  flex-shrink: 0;
 }

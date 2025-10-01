@@ -4,12 +4,21 @@ import { DailyNote, TaskItem } from "./types";
 
 export const VIEW_TYPE_TIMELINE = "daily-notes-timeline";
 
+const ZOOM_CONFIG = {
+  MIN: 0.5,
+  MAX: 4.0,
+  DEFAULT: 1.0,
+  BASE_SEGMENT_WIDTH: 200,
+};
+
 export class TimelineView extends ItemView {
   plugin: DailyNotesTimelinePlugin;
   private contentEl: HTMLElement;
   private startDate: Date;
   private endDate: Date;
   private tooltips: HTMLElement[] = [];
+  private zoomLevel: number = ZOOM_CONFIG.DEFAULT;
+  private timelineScrollEl: HTMLElement | null = null;
 
   constructor(leaf: WorkspaceLeaf, plugin: DailyNotesTimelinePlugin) {
     super(leaf);
@@ -59,6 +68,7 @@ export class TimelineView extends ItemView {
     const controlsDiv = this.contentEl.createDiv({ cls: "timeline-controls" });
 
     const leftGroup = controlsDiv.createDiv({ cls: "timeline-controls-left" });
+    const centerGroup = controlsDiv.createDiv({ cls: "timeline-controls-center" });
     const rightGroup = controlsDiv.createDiv({ cls: "timeline-controls-right" });
 
     const monthSelect = rightGroup.createEl("select", { cls: "dropdown timeline-month-select" });
@@ -68,7 +78,9 @@ export class TimelineView extends ItemView {
       const [year, month] = monthSelect.value.split("-").map(Number);
       this.startDate = new Date(year, month, 1);
       this.endDate = new Date(year, month + 1, 0);
+      this.zoomLevel = ZOOM_CONFIG.DEFAULT;
       await this.renderTimeline();
+      this.updateZoomSlider();
     });
 
     const prevButton = leftGroup.createEl("button", {
@@ -86,8 +98,10 @@ export class TimelineView extends ItemView {
         this.endDate.getMonth(),
         0
       );
+      this.zoomLevel = ZOOM_CONFIG.DEFAULT;
       await this.updateMonthSelect(monthSelect);
       await this.renderTimeline();
+      this.updateZoomSlider();
     });
 
     const nextButton = leftGroup.createEl("button", {
@@ -105,8 +119,10 @@ export class TimelineView extends ItemView {
         this.endDate.getMonth() + 2,
         0
       );
+      this.zoomLevel = ZOOM_CONFIG.DEFAULT;
       await this.updateMonthSelect(monthSelect);
       await this.renderTimeline();
+      this.updateZoomSlider();
     });
 
     const todayButton = leftGroup.createEl("button", {
@@ -117,10 +133,80 @@ export class TimelineView extends ItemView {
       const now = new Date();
       this.startDate = new Date(now.getFullYear(), now.getMonth(), 1);
       this.endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      this.zoomLevel = ZOOM_CONFIG.DEFAULT;
       await this.updateMonthSelect(monthSelect);
       await this.renderTimeline();
+      this.updateZoomSlider();
+    });
+
+    this.renderZoomControls(centerGroup);
+  }
+
+  private renderZoomControls(container: HTMLElement): void {
+    const zoomContainer = container.createDiv({ cls: "timeline-zoom-controls" });
+
+    const zoomOutIcon = zoomContainer.createDiv({ cls: "timeline-zoom-icon" });
+    zoomOutIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path><line x1="8" y1="11" x2="14" y2="11"></line></svg>';
+
+    const sliderContainer = zoomContainer.createDiv({ cls: "timeline-zoom-slider-container" });
+    const zoomSlider = sliderContainer.createEl("input", {
+      type: "range",
+      cls: "timeline-zoom-slider",
+    });
+    zoomSlider.min = String(ZOOM_CONFIG.MIN * 100);
+    zoomSlider.max = String(ZOOM_CONFIG.MAX * 100);
+    zoomSlider.value = String(this.zoomLevel * 100);
+    zoomSlider.step = "10";
+
+    const zoomLabel = sliderContainer.createDiv({ cls: "timeline-zoom-label" });
+    zoomLabel.setText(`${Math.round(this.zoomLevel * 100)}%`);
+
+    const zoomInIcon = zoomContainer.createDiv({ cls: "timeline-zoom-icon" });
+    zoomInIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>';
+
+    zoomSlider.addEventListener("input", () => {
+      const newZoomLevel = parseFloat(zoomSlider.value) / 100;
+      zoomLabel.setText(`${Math.round(newZoomLevel * 100)}%`);
+      this.handleZoomChange(newZoomLevel);
+    });
+
+    this.zoomSlider = zoomSlider;
+    this.zoomLabel = zoomLabel;
+  }
+
+  private updateZoomSlider(): void {
+    if (this.zoomSlider) {
+      this.zoomSlider.value = String(this.zoomLevel * 100);
+    }
+    if (this.zoomLabel) {
+      this.zoomLabel.setText(`${Math.round(this.zoomLevel * 100)}%`);
+    }
+  }
+
+  private handleZoomChange(newZoomLevel: number): void {
+    if (!this.timelineScrollEl) return;
+
+    const scrollContainer = this.timelineScrollEl;
+    const scrollLeft = scrollContainer.scrollLeft;
+    const containerWidth = scrollContainer.clientWidth;
+    const scrollWidth = scrollContainer.scrollWidth;
+
+    const centerPosition = (scrollLeft + containerWidth / 2) / scrollWidth;
+
+    this.zoomLevel = newZoomLevel;
+    this.renderTimeline().then(() => {
+      if (!this.timelineScrollEl) return;
+
+      const newScrollWidth = this.timelineScrollEl.scrollWidth;
+      const newCenterPosition = centerPosition * newScrollWidth;
+      const newScrollLeft = newCenterPosition - containerWidth / 2;
+
+      this.timelineScrollEl.scrollLeft = Math.max(0, newScrollLeft);
     });
   }
+
+  private zoomSlider: HTMLInputElement | null = null;
+  private zoomLabel: HTMLElement | null = null;
 
   private async populateMonthSelect(select: HTMLSelectElement): Promise<void> {
     const availableMonths = await this.plugin.parser.getAvailableMonths(
@@ -163,6 +249,7 @@ export class TimelineView extends ItemView {
     const timelineScroll = this.contentEl.createDiv({
       cls: "timeline-scroll",
     });
+    this.timelineScrollEl = timelineScroll;
 
     const dailyNotes = await this.plugin.parser.parseDailyNotes(
       this.plugin.settings.dailyNotesFolder,
@@ -186,7 +273,7 @@ export class TimelineView extends ItemView {
     const timelineContainer = container.createDiv({ cls: "timeline-continuous" });
     const timelineTrack = timelineContainer.createDiv({ cls: "timeline-track-continuous" });
 
-    const segmentWidth = 200;
+    const segmentWidth = ZOOM_CONFIG.BASE_SEGMENT_WIDTH * this.zoomLevel;
     const totalWidth = segmentWidth * dailyNotes.length;
     timelineTrack.style.width = `${totalWidth}px`;
 
