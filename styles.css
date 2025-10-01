@@ -344,6 +344,32 @@
   border: 1px solid var(--background-modifier-border);
 }
 
+.timeline-zoom-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.timeline-zoom-button:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+  border-color: var(--interactive-accent);
+}
+
+.timeline-zoom-button:active {
+  transform: scale(0.95);
+}
+
 .timeline-zoom-icon {
   display: flex;
   align-items: center;

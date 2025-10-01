@@ -5,9 +5,10 @@ import { DailyNote, TaskItem } from "./types";
 export const VIEW_TYPE_TIMELINE = "daily-notes-timeline";
 
 const ZOOM_CONFIG = {
-  MIN: 0.5,
-  MAX: 4.0,
+  MIN: 0.2,
+  MAX: 10.0,
   DEFAULT: 1.0,
+  STEP: 0.5,
   BASE_SEGMENT_WIDTH: 200,
 };
 
@@ -145,8 +146,15 @@ export class TimelineView extends ItemView {
   private renderZoomControls(container: HTMLElement): void {
     const zoomContainer = container.createDiv({ cls: "timeline-zoom-controls" });
 
-    const zoomOutIcon = zoomContainer.createDiv({ cls: "timeline-zoom-icon" });
-    zoomOutIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path><line x1="8" y1="11" x2="14" y2="11"></line></svg>';
+    const zoomOutButton = zoomContainer.createEl("button", {
+      cls: "timeline-zoom-button",
+      attr: { "aria-label": "Zoom out" },
+    });
+    zoomOutButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path><line x1="8" y1="11" x2="14" y2="11"></line></svg>';
+    zoomOutButton.addEventListener("click", () => {
+      const newZoom = Math.max(ZOOM_CONFIG.MIN, this.zoomLevel - ZOOM_CONFIG.STEP);
+      this.applyZoom(newZoom);
+    });
 
     const sliderContainer = zoomContainer.createDiv({ cls: "timeline-zoom-slider-container" });
     const zoomSlider = sliderContainer.createEl("input", {
@@ -156,18 +164,29 @@ export class TimelineView extends ItemView {
     zoomSlider.min = String(ZOOM_CONFIG.MIN * 100);
     zoomSlider.max = String(ZOOM_CONFIG.MAX * 100);
     zoomSlider.value = String(this.zoomLevel * 100);
-    zoomSlider.step = "10";
+    zoomSlider.step = String(ZOOM_CONFIG.STEP * 100);
 
     const zoomLabel = sliderContainer.createDiv({ cls: "timeline-zoom-label" });
     zoomLabel.setText(`${Math.round(this.zoomLevel * 100)}%`);
 
-    const zoomInIcon = zoomContainer.createDiv({ cls: "timeline-zoom-icon" });
-    zoomInIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>';
+    const zoomInButton = zoomContainer.createEl("button", {
+      cls: "timeline-zoom-button",
+      attr: { "aria-label": "Zoom in" },
+    });
+    zoomInButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>';
+    zoomInButton.addEventListener("click", () => {
+      const newZoom = Math.min(ZOOM_CONFIG.MAX, this.zoomLevel + ZOOM_CONFIG.STEP);
+      this.applyZoom(newZoom);
+    });
 
     zoomSlider.addEventListener("input", () => {
       const newZoomLevel = parseFloat(zoomSlider.value) / 100;
       zoomLabel.setText(`${Math.round(newZoomLevel * 100)}%`);
-      this.handleZoomChange(newZoomLevel);
+    });
+
+    zoomSlider.addEventListener("change", () => {
+      const newZoomLevel = parseFloat(zoomSlider.value) / 100;
+      this.applyZoom(newZoomLevel);
     });
 
     this.zoomSlider = zoomSlider;
@@ -183,7 +202,7 @@ export class TimelineView extends ItemView {
     }
   }
 
-  private handleZoomChange(newZoomLevel: number): void {
+  private applyZoom(newZoomLevel: number): void {
     if (!this.timelineScrollEl) return;
 
     const scrollContainer = this.timelineScrollEl;
@@ -194,6 +213,8 @@ export class TimelineView extends ItemView {
     const centerPosition = (scrollLeft + containerWidth / 2) / scrollWidth;
 
     this.zoomLevel = newZoomLevel;
+    this.updateZoomSlider();
+
     this.renderTimeline().then(() => {
       if (!this.timelineScrollEl) return;
 
