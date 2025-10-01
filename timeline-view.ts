@@ -165,17 +165,20 @@ export class TimelineView extends ItemView {
     const timelineContainer = container.createDiv({ cls: "timeline-continuous" });
     const timelineTrack = timelineContainer.createDiv({ cls: "timeline-track-continuous" });
 
+    const segmentWidth = 200;
+    const totalWidth = segmentWidth * dailyNotes.length;
+    timelineTrack.style.width = `${totalWidth}px`;
+
     for (let i = 0; i < dailyNotes.length; i++) {
       const note = dailyNotes[i];
-      this.renderDaySegment(timelineTrack, note, i, dailyNotes.length);
+      this.renderDaySegment(timelineTrack, note, i, dailyNotes.length, segmentWidth);
     }
   }
 
-  private renderDaySegment(track: HTMLElement, note: DailyNote, index: number, total: number): void {
-    const segmentWidth = 100 / total;
+  private renderDaySegment(track: HTMLElement, note: DailyNote, index: number, total: number, segmentWidth: number): void {
     const segment = track.createDiv({ cls: "timeline-segment" });
-    segment.style.width = `${segmentWidth}%`;
-    segment.style.left = `${segmentWidth * index}%`;
+    segment.style.width = `${segmentWidth}px`;
+    segment.style.left = `${segmentWidth * index}px`;
 
     if (note.tasks.length === 0) {
       segment.addClass("timeline-segment-empty");

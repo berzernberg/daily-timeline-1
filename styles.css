@@ -57,17 +57,21 @@
 }
 
 .timeline-continuous {
-  min-height: 200px;
+  min-height: 280px;
   width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 20px;
 }
 
 .timeline-track-continuous {
   position: relative;
-  height: 120px;
+  height: 180px;
   background: var(--background-secondary);
   border-radius: 8px;
   border: 2px solid var(--background-modifier-border);
-  min-width: 800px;
+  display: inline-block;
+  white-space: nowrap;
 }
 
 .timeline-track-continuous::before {
@@ -87,6 +91,7 @@
   top: 0;
   bottom: 0;
   border-right: 2px solid var(--background-modifier-border);
+  min-width: 180px;
 }
 
 .timeline-segment:last-child {
@@ -183,21 +188,22 @@
 
 .timeline-task-label {
   position: absolute;
-  top: -24px;
+  top: -28px;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 0.7em;
+  font-size: 0.75em;
   color: var(--text-muted);
   white-space: nowrap;
-  background: var(--background-primary);
-  padding: 2px 4px;
+  background: var(--background-secondary);
+  padding: 3px 6px;
   border-radius: 3px;
   pointer-events: none;
+  border: 1px solid var(--background-modifier-border);
 }
 
 .timeline-tooltip {
   position: absolute;
-  bottom: calc(100% + 12px);
+  top: calc(100% + 12px);
   left: 50%;
   transform: translateX(-50%);
   opacity: 0;
@@ -224,11 +230,11 @@
 .timeline-tooltip::after {
   content: '';
   position: absolute;
-  top: 100%;
+  bottom: 100%;
   left: 50%;
   transform: translateX(-50%);
   border: 6px solid transparent;
-  border-top-color: var(--background-secondary);
+  border-bottom-color: var(--background-secondary);
 }
 
 .timeline-tooltip-task {
