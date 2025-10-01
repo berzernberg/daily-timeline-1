@@ -14,7 +14,7 @@ export class DailyNotesParser {
     startDate: Date,
     endDate: Date
   ): Promise<DailyNote[]> {
-    const dailyNotes: DailyNote[] = [];
+    const dailyNotesMap = new Map<string, DailyNote>();
     const files = this.vault.getMarkdownFiles();
 
     for (const file of files) {
@@ -24,19 +24,47 @@ export class DailyNotesParser {
           const noteDate = this.parseDate(dateStr);
           if (noteDate && noteDate >= startDate && noteDate <= endDate) {
             const tasks = await this.extractTasks(file);
-            if (tasks.length > 0) {
-              dailyNotes.push({
-                date: dateStr,
-                path: file.path,
-                tasks: tasks,
-              });
-            }
+            dailyNotesMap.set(dateStr, {
+              date: dateStr,
+              path: file.path,
+              tasks: tasks,
+            });
           }
         }
       }
     }
 
-    return dailyNotes.sort((a, b) => a.date.localeCompare(b.date));
+    const allDates = this.getAllDatesInRange(startDate, endDate);
+    const dailyNotes: DailyNote[] = [];
+
+    for (const dateStr of allDates) {
+      if (dailyNotesMap.has(dateStr)) {
+        dailyNotes.push(dailyNotesMap.get(dateStr)!);
+      } else {
+        dailyNotes.push({
+          date: dateStr,
+          path: '',
+          tasks: [],
+        });
+      }
+    }
+
+    return dailyNotes;
+  }
+
+  private getAllDatesInRange(startDate: Date, endDate: Date): string[] {
+    const dates: string[] = [];
+    const current = new Date(startDate);
+
+    while (current <= endDate) {
+      const year = current.getFullYear();
+      const month = String(current.getMonth() + 1).padStart(2, '0');
+      const day = String(current.getDate()).padStart(2, '0');
+      dates.push(`${year}-${month}-${day}`);
+      current.setDate(current.getDate() + 1);
+    }
+
+    return dates;
   }
 
   private isInDailyNotesFolder(filePath: string, folderPath: string): boolean {

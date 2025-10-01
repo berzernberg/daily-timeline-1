@@ -153,48 +153,66 @@ export class TimelineView extends ItemView {
     if (dailyNotes.length === 0) {
       timelineScroll.createDiv({
         cls: "timeline-empty",
-        text: "No tasks found in the selected date range",
+        text: "No date range selected",
       });
       return;
     }
 
-    for (const note of dailyNotes) {
-      this.renderDayTimeline(timelineScroll, note);
+    this.renderContinuousTimeline(timelineScroll, dailyNotes);
+  }
+
+  private renderContinuousTimeline(container: HTMLElement, dailyNotes: DailyNote[]): void {
+    const timelineContainer = container.createDiv({ cls: "timeline-continuous" });
+    const timelineTrack = timelineContainer.createDiv({ cls: "timeline-track-continuous" });
+
+    for (let i = 0; i < dailyNotes.length; i++) {
+      const note = dailyNotes[i];
+      this.renderDaySegment(timelineTrack, note, i, dailyNotes.length);
     }
   }
 
-  private renderDayTimeline(container: HTMLElement, note: DailyNote): void {
-    const dayContainer = container.createDiv({ cls: "timeline-day" });
+  private renderDaySegment(track: HTMLElement, note: DailyNote, index: number, total: number): void {
+    const segmentWidth = 100 / total;
+    const segment = track.createDiv({ cls: "timeline-segment" });
+    segment.style.width = `${segmentWidth}%`;
+    segment.style.left = `${segmentWidth * index}%`;
 
-    const dateHeader = dayContainer.createDiv({ cls: "timeline-date-header" });
+    if (note.tasks.length === 0) {
+      segment.addClass("timeline-segment-empty");
+    }
+
     const dateObj = new Date(note.date);
-    dateHeader.setText(
+    const dateLabel = segment.createDiv({ cls: "timeline-segment-date" });
+    dateLabel.setText(
       dateObj.toLocaleDateString("en-US", {
-        weekday: "short",
-        year: "numeric",
         month: "short",
         day: "numeric",
       })
     );
 
-    const timelineTrack = dayContainer.createDiv({ cls: "timeline-track" });
+    const weekdayLabel = segment.createDiv({ cls: "timeline-segment-weekday" });
+    weekdayLabel.setText(
+      dateObj.toLocaleDateString("en-US", {
+        weekday: "short",
+      })
+    );
 
-    const startLabel = timelineTrack.createDiv({ cls: "timeline-time-label timeline-time-start" });
+    const startLabel = segment.createDiv({ cls: "timeline-segment-time timeline-segment-time-start" });
     startLabel.setText("00:00");
 
-    const endLabel = timelineTrack.createDiv({ cls: "timeline-time-label timeline-time-end" });
+    const endLabel = segment.createDiv({ cls: "timeline-segment-time timeline-segment-time-end" });
     endLabel.setText("23:59");
 
     for (const task of note.tasks) {
-      this.renderTask(timelineTrack, task);
+      this.renderTaskInSegment(segment, task);
     }
   }
 
-  private renderTask(track: HTMLElement, task: TaskItem): void {
+  private renderTaskInSegment(segment: HTMLElement, task: TaskItem): void {
     const totalMinutes = task.hour * 60 + task.minute;
     const percentage = (totalMinutes / (24 * 60)) * 100;
 
-    const taskDot = track.createDiv({ cls: "timeline-task-dot" });
+    const taskDot = segment.createDiv({ cls: "timeline-task-dot" });
     taskDot.style.left = `${percentage}%`;
     taskDot.setAttribute("data-status", task.status);
 

@@ -42,7 +42,7 @@
 .timeline-scroll {
   flex: 1;
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: auto;
   padding: 12px;
   display: flex;
   flex-direction: column;
@@ -56,61 +56,94 @@
   font-size: 1.1em;
 }
 
-.timeline-day {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px;
+.timeline-continuous {
+  min-height: 200px;
+  width: 100%;
+}
+
+.timeline-track-continuous {
+  position: relative;
+  height: 120px;
   background: var(--background-secondary);
   border-radius: 8px;
-  border: 1px solid var(--background-modifier-border);
+  border: 2px solid var(--background-modifier-border);
+  min-width: 800px;
 }
 
-.timeline-date-header {
-  font-weight: 600;
-  font-size: 1.1em;
-  color: var(--text-normal);
-  padding-bottom: 8px;
-  border-bottom: 2px solid var(--background-modifier-border);
-}
-
-.timeline-track {
-  position: relative;
-  height: 60px;
-  background: var(--background-primary);
-  border-radius: 4px;
-  border: 1px solid var(--background-modifier-border);
-}
-
-.timeline-track::before {
+.timeline-track-continuous::before {
   content: '';
   position: absolute;
   top: 50%;
   left: 0;
   right: 0;
-  height: 2px;
+  height: 3px;
   background: var(--background-modifier-border);
   transform: translateY(-50%);
-}
-
-.timeline-time-label {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 0.75em;
-  color: var(--text-muted);
-  background: var(--background-primary);
-  padding: 2px 6px;
-  border-radius: 3px;
   z-index: 1;
 }
 
-.timeline-time-start {
-  left: 8px;
+.timeline-segment {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-right: 2px solid var(--background-modifier-border);
 }
 
-.timeline-time-end {
-  right: 8px;
+.timeline-segment:last-child {
+  border-right: none;
+}
+
+.timeline-segment-empty {
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    var(--background-primary-alt) 10px,
+    var(--background-primary-alt) 20px
+  );
+  opacity: 0.3;
+}
+
+.timeline-segment-date {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-weight: 600;
+  font-size: 0.85em;
+  color: var(--text-normal);
+  white-space: nowrap;
+  z-index: 2;
+}
+
+.timeline-segment-weekday {
+  position: absolute;
+  top: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.7em;
+  color: var(--text-muted);
+  white-space: nowrap;
+  z-index: 2;
+}
+
+.timeline-segment-time {
+  position: absolute;
+  bottom: 8px;
+  font-size: 0.65em;
+  color: var(--text-muted);
+  background: var(--background-secondary);
+  padding: 2px 4px;
+  border-radius: 3px;
+  z-index: 2;
+}
+
+.timeline-segment-time-start {
+  left: 4px;
+}
+
+.timeline-segment-time-end {
+  right: 4px;
 }
 
 .timeline-task-dot {
