@@ -9,6 +9,7 @@ export class TimelineView extends ItemView {
   private contentEl: HTMLElement;
   private startDate: Date;
   private endDate: Date;
+  private tooltips: HTMLElement[] = [];
 
   constructor(leaf: WorkspaceLeaf, plugin: DailyNotesTimelinePlugin) {
     super(leaf);
@@ -43,7 +44,15 @@ export class TimelineView extends ItemView {
   }
 
   async onClose(): Promise<void> {
+    this.cleanupTooltips();
     this.contentEl.empty();
+  }
+
+  private cleanupTooltips(): void {
+    for (const tooltip of this.tooltips) {
+      tooltip.remove();
+    }
+    this.tooltips = [];
   }
 
   private async renderControls(): Promise<void> {
@@ -145,6 +154,7 @@ export class TimelineView extends ItemView {
   }
 
   private async renderTimeline(): Promise<void> {
+    this.cleanupTooltips();
     const existingTimeline = this.contentEl.querySelector(".timeline-scroll");
     if (existingTimeline) {
       existingTimeline.remove();
@@ -233,7 +243,8 @@ export class TimelineView extends ItemView {
     const taskLabel = taskDot.createDiv({ cls: "timeline-task-label" });
     taskLabel.setText(task.time);
 
-    const tooltip = taskDot.createDiv({ cls: "timeline-tooltip" });
+    const tooltip = document.body.createDiv({ cls: "timeline-tooltip" });
+    this.tooltips.push(tooltip);
     const tooltipContent = tooltip.createDiv({ cls: "timeline-tooltip-content" });
 
     const taskText = tooltipContent.createDiv({ cls: "timeline-tooltip-task" });
@@ -258,6 +269,14 @@ export class TimelineView extends ItemView {
     });
 
     taskDot.addEventListener("mouseleave", () => {
+      tooltip.removeClass("is-visible");
+    });
+
+    tooltip.addEventListener("mouseenter", () => {
+      tooltip.addClass("is-visible");
+    });
+
+    tooltip.addEventListener("mouseleave", () => {
       tooltip.removeClass("is-visible");
     });
   }
