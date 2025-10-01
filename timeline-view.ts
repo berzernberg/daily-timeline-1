@@ -158,10 +158,10 @@ export class TimelineView extends ItemView {
       return;
     }
 
-    this.renderContinuousTimeline(timelineScroll, dailyNotes);
+    await this.renderContinuousTimeline(timelineScroll, dailyNotes);
   }
 
-  private renderContinuousTimeline(container: HTMLElement, dailyNotes: DailyNote[]): void {
+  private async renderContinuousTimeline(container: HTMLElement, dailyNotes: DailyNote[]): Promise<void> {
     const timelineContainer = container.createDiv({ cls: "timeline-continuous" });
     const timelineTrack = timelineContainer.createDiv({ cls: "timeline-track-continuous" });
 
@@ -171,11 +171,11 @@ export class TimelineView extends ItemView {
 
     for (let i = 0; i < dailyNotes.length; i++) {
       const note = dailyNotes[i];
-      this.renderDaySegment(timelineTrack, note, i, dailyNotes.length, segmentWidth);
+      await this.renderDaySegment(timelineTrack, note, i, dailyNotes.length, segmentWidth);
     }
   }
 
-  private renderDaySegment(track: HTMLElement, note: DailyNote, index: number, total: number, segmentWidth: number): void {
+  private async renderDaySegment(track: HTMLElement, note: DailyNote, index: number, total: number, segmentWidth: number): Promise<void> {
     const segment = track.createDiv({ cls: "timeline-segment" });
     segment.style.width = `${segmentWidth}px`;
     segment.style.left = `${segmentWidth * index}px`;
@@ -207,11 +207,11 @@ export class TimelineView extends ItemView {
     endLabel.setText("23:59");
 
     for (const task of note.tasks) {
-      this.renderTaskInSegment(segment, task);
+      await this.renderTaskInSegment(segment, task);
     }
   }
 
-  private renderTaskInSegment(segment: HTMLElement, task: TaskItem): void {
+  private async renderTaskInSegment(segment: HTMLElement, task: TaskItem): Promise<void> {
     const totalMinutes = task.hour * 60 + task.minute;
     const percentage = (totalMinutes / (24 * 60)) * 100;
 
@@ -226,7 +226,9 @@ export class TimelineView extends ItemView {
     const tooltipContent = tooltip.createDiv({ cls: "timeline-tooltip-content" });
 
     const taskText = tooltipContent.createDiv({ cls: "timeline-tooltip-task" });
-    taskText.setText(`[${task.status}] ${task.content}`);
+    taskText.textContent = `[${task.status}] `;
+
+    await this.renderTaskContent(taskText, task.content);
 
     if (task.subItems.length > 0) {
       const subList = tooltipContent.createEl("ul", { cls: "timeline-tooltip-subitems" });
@@ -242,5 +244,50 @@ export class TimelineView extends ItemView {
     taskDot.addEventListener("mouseleave", () => {
       tooltip.removeClass("is-visible");
     });
+  }
+
+  private async renderTaskContent(container: HTMLElement, content: string): Promise<void> {
+    const imageEmbedRegex = /!\[\[([^\]]+)\]\]/g;
+    let lastIndex = 0;
+    let match;
+
+    while ((match = imageEmbedRegex.exec(content)) !== null) {
+      if (match.index > lastIndex) {
+        const textSpan = container.createSpan();
+        textSpan.textContent = content.substring(lastIndex, match.index);
+      }
+
+      const imageName = match[1];
+      const imageFile = this.plugin.app.vault.getAbstractFileByPath(imageName);
+
+      if (imageFile && imageFile instanceof this.plugin.app.vault.adapter.constructor) {
+        const imageContainer = container.createDiv({ cls: "timeline-tooltip-image" });
+        const img = imageContainer.createEl("img");
+        const resourcePath = this.plugin.app.vault.getResourcePath(imageFile);
+        img.src = resourcePath;
+        img.alt = imageName;
+      } else {
+        const files = this.plugin.app.vault.getFiles();
+        const matchedFile = files.find(f => f.name === imageName || f.path.endsWith(imageName));
+
+        if (matchedFile) {
+          const imageContainer = container.createDiv({ cls: "timeline-tooltip-image" });
+          const img = imageContainer.createEl("img");
+          const resourcePath = this.plugin.app.vault.getResourcePath(matchedFile);
+          img.src = resourcePath;
+          img.alt = imageName;
+        } else {
+          const textSpan = container.createSpan();
+          textSpan.textContent = match[0];
+        }
+      }
+
+      lastIndex = match.index + match[0].length;
+    }
+
+    if (lastIndex < content.length) {
+      const textSpan = container.createSpan();
+      textSpan.textContent = content.substring(lastIndex);
+    }
   }
 }

@@ -225,6 +225,8 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   min-width: 200px;
   max-width: 400px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .timeline-tooltip::after {
@@ -242,6 +244,9 @@
   color: var(--text-normal);
   margin-bottom: 8px;
   word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+  line-height: 1.5;
 }
 
 .timeline-tooltip-subitems {
@@ -254,4 +259,18 @@
   color: var(--text-muted);
   font-size: 0.9em;
   margin: 4px 0;
+}
+
+.timeline-tooltip-image {
+  margin: 8px 0;
+  max-width: 100%;
+  text-align: center;
+}
+
+.timeline-tooltip-image img {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 4px;
+  border: 1px solid var(--background-modifier-border);
+  object-fit: contain;
 }
