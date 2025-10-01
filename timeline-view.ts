@@ -244,11 +244,16 @@ export class TimelineView extends ItemView {
     if (task.subItems.length > 0) {
       const subList = tooltipContent.createEl("ul", { cls: "timeline-tooltip-subitems" });
       for (const subItem of task.subItems) {
-        subList.createEl("li").setText(subItem);
+        const listItem = subList.createEl("li");
+        await this.renderTaskContent(listItem, subItem);
       }
     }
 
     taskDot.addEventListener("mouseenter", () => {
+      const rect = taskDot.getBoundingClientRect();
+      tooltip.style.top = `${rect.bottom + 12}px`;
+      tooltip.style.left = `${rect.left + rect.width / 2}px`;
+      tooltip.style.transform = "translateX(-50%)";
       tooltip.addClass("is-visible");
     });
 
@@ -258,47 +263,72 @@ export class TimelineView extends ItemView {
   }
 
   private async renderTaskContent(container: HTMLElement, content: string): Promise<void> {
-    const imageEmbedRegex = /!\[\[([^\]]+)\]\]/g;
+    const combinedRegex = /(!\[\[([^\]]+)\]\])|(\[\[([^\]]+)\]\])/g;
     let lastIndex = 0;
     let match;
 
-    while ((match = imageEmbedRegex.exec(content)) !== null) {
+    while ((match = combinedRegex.exec(content)) !== null) {
       if (match.index > lastIndex) {
-        const textSpan = container.createSpan();
-        textSpan.textContent = content.substring(lastIndex, match.index);
+        await this.renderTextWithLinks(container, content.substring(lastIndex, match.index));
       }
 
-      const imageName = match[1];
-      const imageFile = this.plugin.app.vault.getAbstractFileByPath(imageName);
-
-      if (imageFile && imageFile instanceof this.plugin.app.vault.adapter.constructor) {
-        const imageContainer = container.createDiv({ cls: "timeline-tooltip-image" });
-        const img = imageContainer.createEl("img");
-        const resourcePath = this.plugin.app.vault.getResourcePath(imageFile);
-        img.src = resourcePath;
-        img.alt = imageName;
-      } else {
-        const files = this.plugin.app.vault.getFiles();
-        const matchedFile = files.find(f => f.name === imageName || f.path.endsWith(imageName));
-
-        if (matchedFile) {
-          const imageContainer = container.createDiv({ cls: "timeline-tooltip-image" });
-          const img = imageContainer.createEl("img");
-          const resourcePath = this.plugin.app.vault.getResourcePath(matchedFile);
-          img.src = resourcePath;
-          img.alt = imageName;
-        } else {
-          const textSpan = container.createSpan();
-          textSpan.textContent = match[0];
-        }
+      if (match[1]) {
+        const imageName = match[2];
+        await this.renderImage(container, imageName);
+      } else if (match[3]) {
+        const linkText = match[4];
+        this.renderLink(container, linkText);
       }
 
       lastIndex = match.index + match[0].length;
     }
 
     if (lastIndex < content.length) {
-      const textSpan = container.createSpan();
-      textSpan.textContent = content.substring(lastIndex);
+      await this.renderTextWithLinks(container, content.substring(lastIndex));
+    }
+  }
+
+  private async renderTextWithLinks(container: HTMLElement, text: string): Promise<void> {
+    const textSpan = container.createSpan();
+    textSpan.textContent = text;
+  }
+
+  private renderLink(container: HTMLElement, linkText: string): void {
+    const link = container.createEl("a", {
+      cls: "internal-link timeline-tooltip-link",
+      href: "#",
+    });
+    link.textContent = linkText;
+
+    link.addEventListener("click", async (e) => {
+      e.preventDefault();
+      const file = this.plugin.app.metadataCache.getFirstLinkpathDest(linkText, "");
+      if (file) {
+        await this.plugin.app.workspace.getLeaf(false).openFile(file);
+      }
+    });
+  }
+
+  private async renderImage(container: HTMLElement, imageName: string): Promise<void> {
+    const imageFile = this.plugin.app.vault.getAbstractFileByPath(imageName);
+
+    if (imageFile && imageFile instanceof this.plugin.app.vault.adapter.constructor) {
+      const imageContainer = container.createDiv({ cls: "timeline-tooltip-image" });
+      const img = imageContainer.createEl("img");
+      const resourcePath = this.plugin.app.vault.getResourcePath(imageFile);
+      img.src = resourcePath;
+      img.alt = imageName;
+    } else {
+      const files = this.plugin.app.vault.getFiles();
+      const matchedFile = files.find(f => f.name === imageName || f.path.endsWith(imageName));
+
+      if (matchedFile) {
+        const imageContainer = container.createDiv({ cls: "timeline-tooltip-image" });
+        const img = imageContainer.createEl("img");
+        const resourcePath = this.plugin.app.vault.getResourcePath(matchedFile);
+        img.src = resourcePath;
+        img.alt = imageName;
+      }
     }
   }
 }
