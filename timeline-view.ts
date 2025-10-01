@@ -38,7 +38,7 @@ export class TimelineView extends ItemView {
 
     this.contentEl = container.createDiv({ cls: "timeline-content" });
 
-    this.renderControls();
+    await this.renderControls();
     await this.renderTimeline();
   }
 
@@ -46,30 +46,14 @@ export class TimelineView extends ItemView {
     this.contentEl.empty();
   }
 
-  private renderControls(): void {
+  private async renderControls(): Promise<void> {
     const controlsDiv = this.contentEl.createDiv({ cls: "timeline-controls" });
 
-    const monthSelect = controlsDiv.createEl("select", { cls: "dropdown" });
-    const currentYear = new Date().getFullYear();
+    const leftGroup = controlsDiv.createDiv({ cls: "timeline-controls-left" });
+    const rightGroup = controlsDiv.createDiv({ cls: "timeline-controls-right" });
 
-    for (let year = currentYear - 1; year <= currentYear + 1; year++) {
-      for (let month = 0; month < 12; month++) {
-        const date = new Date(year, month, 1);
-        const option = monthSelect.createEl("option");
-        option.value = `${year}-${month}`;
-        option.text = date.toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "long",
-        });
-
-        if (
-          year === this.startDate.getFullYear() &&
-          month === this.startDate.getMonth()
-        ) {
-          option.selected = true;
-        }
-      }
-    }
+    const monthSelect = rightGroup.createEl("select", { cls: "dropdown timeline-month-select" });
+    await this.populateMonthSelect(monthSelect);
 
     monthSelect.addEventListener("change", async () => {
       const [year, month] = monthSelect.value.split("-").map(Number);
@@ -78,7 +62,7 @@ export class TimelineView extends ItemView {
       await this.renderTimeline();
     });
 
-    const prevButton = controlsDiv.createEl("button", {
+    const prevButton = leftGroup.createEl("button", {
       text: "← Previous",
       cls: "mod-cta",
     });
@@ -97,7 +81,7 @@ export class TimelineView extends ItemView {
       await this.renderTimeline();
     });
 
-    const nextButton = controlsDiv.createEl("button", {
+    const nextButton = leftGroup.createEl("button", {
       text: "Next →",
       cls: "mod-cta",
     });
@@ -116,7 +100,7 @@ export class TimelineView extends ItemView {
       await this.renderTimeline();
     });
 
-    const todayButton = controlsDiv.createEl("button", {
+    const todayButton = leftGroup.createEl("button", {
       text: "Today",
       cls: "mod-cta",
     });
@@ -127,6 +111,33 @@ export class TimelineView extends ItemView {
       await this.updateMonthSelect(monthSelect);
       await this.renderTimeline();
     });
+  }
+
+  private async populateMonthSelect(select: HTMLSelectElement): Promise<void> {
+    const availableMonths = await this.plugin.parser.getAvailableMonths(
+      this.plugin.settings.dailyNotesFolder,
+      this.plugin.settings.dateFormat
+    );
+
+    select.empty();
+
+    for (const monthKey of availableMonths) {
+      const [year, month] = monthKey.split("-").map(Number);
+      const date = new Date(year, month, 1);
+      const option = select.createEl("option");
+      option.value = monthKey;
+      option.text = date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+      });
+
+      if (
+        year === this.startDate.getFullYear() &&
+        month === this.startDate.getMonth()
+      ) {
+        option.selected = true;
+      }
+    }
   }
 
   private async updateMonthSelect(select: HTMLSelectElement): Promise<void> {

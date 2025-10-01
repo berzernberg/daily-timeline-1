@@ -8,6 +8,26 @@ export class DailyNotesParser {
     this.vault = vault;
   }
 
+  async getAvailableMonths(folderPath: string, dateFormat: string): Promise<string[]> {
+    const monthsSet = new Set<string>();
+    const files = this.vault.getMarkdownFiles();
+
+    for (const file of files) {
+      if (this.isInDailyNotesFolder(file.path, folderPath)) {
+        const dateStr = this.extractDateFromFilename(file.name, dateFormat);
+        if (dateStr) {
+          const noteDate = this.parseDate(dateStr);
+          if (noteDate) {
+            const monthKey = `${noteDate.getFullYear()}-${noteDate.getMonth()}`;
+            monthsSet.add(monthKey);
+          }
+        }
+      }
+    }
+
+    return Array.from(monthsSet).sort();
+  }
+
   async parseDailyNotes(
     folderPath: string,
     dateFormat: string,

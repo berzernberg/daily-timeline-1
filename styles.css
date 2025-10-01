@@ -15,22 +15,41 @@
 
 .timeline-controls {
   display: flex;
-  gap: 10px;
+  justify-content: space-between;
   align-items: center;
   padding: 12px;
   background: var(--background-secondary);
   border-radius: 6px;
   flex-shrink: 0;
+  gap: 16px;
+}
+
+.timeline-controls-left {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.timeline-controls-right {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex: 0 0 auto;
 }
 
 .timeline-controls select {
-  flex: 1;
   padding: 6px 12px;
   border-radius: 4px;
   background: var(--background-primary);
   border: 1px solid var(--background-modifier-border);
   color: var(--text-normal);
   cursor: pointer;
+}
+
+.timeline-month-select {
+  min-width: 200px;
+  max-width: 250px;
 }
 
 .timeline-controls button {
