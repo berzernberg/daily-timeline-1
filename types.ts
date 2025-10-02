@@ -33,6 +33,9 @@ export interface TimelineSettings {
   dateFormat: string;
   defaultRangeMonths: number;
   tagStyles: TagStylePreset[];
+  enableGrouping: boolean;
+  minSpacingPixels: number;
+  maxGroupSpanPixels: number;
 }
 
 export const DEFAULT_SETTINGS: TimelineSettings = {
@@ -40,4 +43,7 @@ export const DEFAULT_SETTINGS: TimelineSettings = {
   dateFormat: "YYYY-MM-DD",
   defaultRangeMonths: 1,
   tagStyles: [],
+  enableGrouping: true,
+  minSpacingPixels: 25,
+  maxGroupSpanPixels: 60,
 };

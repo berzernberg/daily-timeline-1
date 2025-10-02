@@ -67,6 +67,70 @@ export class TimelineSettingTab extends PluginSettingTab {
 
     this.displayTagStylesList(containerEl);
     this.displayAddTagStyleForm(containerEl);
+
+    this.displayGroupingSettings(containerEl);
+  }
+
+  private displayGroupingSettings(containerEl: HTMLElement): void {
+    containerEl.createEl("h2", { text: "Points Grouping" });
+    containerEl.createEl("p", {
+      text: "Configure how timeline points are grouped when they appear close together. Grouping helps reduce visual clutter by combining nearby tasks into a single point with a count badge.",
+      cls: "setting-item-description"
+    });
+
+    new Setting(containerEl)
+      .setName("Enable Grouping")
+      .setDesc("When enabled, tasks that appear close together on the timeline will be automatically grouped")
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.enableGrouping)
+          .onChange(async (value) => {
+            this.plugin.settings.enableGrouping = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Minimum Spacing")
+      .setDesc("Minimum distance (in pixels) between tasks before they are grouped together. Lower values create more groups.")
+      .addSlider((slider) =>
+        slider
+          .setLimits(10, 100, 5)
+          .setValue(this.plugin.settings.minSpacingPixels)
+          .setDynamicTooltip()
+          .onChange(async (value) => {
+            this.plugin.settings.minSpacingPixels = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Maximum Group Span")
+      .setDesc("Maximum distance (in pixels) between the first and last task in a group. Prevents overly large groups.")
+      .addSlider((slider) =>
+        slider
+          .setLimits(30, 150, 10)
+          .setValue(this.plugin.settings.maxGroupSpanPixels)
+          .setDynamicTooltip()
+          .onChange(async (value) => {
+            this.plugin.settings.maxGroupSpanPixels = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .addButton((button) =>
+        button
+          .setButtonText("Reset to Defaults")
+          .setTooltip("Restore default grouping settings")
+          .onClick(async () => {
+            this.plugin.settings.enableGrouping = true;
+            this.plugin.settings.minSpacingPixels = 25;
+            this.plugin.settings.maxGroupSpanPixels = 60;
+            await this.plugin.saveSettings();
+            this.display();
+          })
+      );
   }
 
   private displayTagStylesList(containerEl: HTMLElement): void {

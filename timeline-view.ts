@@ -383,14 +383,18 @@ export class TimelineView extends ItemView {
   private groupOverlappingTasks(tasks: TaskItem[], segmentWidth: number): (TaskItem | GroupedTask)[] {
     if (tasks.length === 0) return [];
 
+    if (!this.plugin.settings.enableGrouping) {
+      return tasks;
+    }
+
     const sortedTasks = [...tasks].sort((a, b) => {
       const aMinutes = a.hour * 60 + a.minute;
       const bMinutes = b.hour * 60 + b.minute;
       return aMinutes - bMinutes;
     });
 
-    const MIN_SPACING_PIXELS = 25;
-    const MAX_GROUP_SPAN_PIXELS = 60;
+    const MIN_SPACING_PIXELS = this.plugin.settings.minSpacingPixels;
+    const MAX_GROUP_SPAN_PIXELS = this.plugin.settings.maxGroupSpanPixels;
     const groups: (TaskItem | GroupedTask)[] = [];
     let currentGroup: TaskItem[] = [sortedTasks[0]];
 
