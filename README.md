@@ -63,7 +63,7 @@ You can embed compact timelines directly in your notes using codeblocks. This is
 #### Basic Syntax
 
 ````markdown
-```timeline
+```daily-timeline
 mode: month
 startDate: 2025-10-01
 ```
