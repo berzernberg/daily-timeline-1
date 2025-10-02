@@ -384,6 +384,14 @@
   margin-bottom: 6px;
   padding-bottom: 4px;
   border-bottom: 1px solid var(--background-modifier-border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.timeline-tooltip-time-emoji {
+  font-size: 1.1em;
+  line-height: 1;
 }
 
 .timeline-tooltip::after {

@@ -470,7 +470,13 @@ var TimelineView = class extends import_obsidian.ItemView {
         tooltipContent.addClass("timeline-tooltip-stacked");
       }
       const timeHeader = tooltipContent.createDiv({ cls: "timeline-tooltip-time" });
-      timeHeader.setText(task.time);
+      const taskTagStyle = this.getTagStyle(task.firstTag);
+      if (taskTagStyle && taskTagStyle.emoji) {
+        const emojiSpan = timeHeader.createSpan({ cls: "timeline-tooltip-time-emoji" });
+        emojiSpan.setText(taskTagStyle.emoji);
+      }
+      const timeText = timeHeader.createSpan();
+      timeText.setText(task.time);
       const taskText = tooltipContent.createDiv({ cls: "timeline-tooltip-task" });
       taskText.textContent = `[${task.status}] `;
       await this.renderTaskContent(taskText, task.content);
@@ -552,7 +558,12 @@ var TimelineView = class extends import_obsidian.ItemView {
     this.tooltips.push(tooltip);
     const tooltipContent = tooltip.createDiv({ cls: "timeline-tooltip-content" });
     const timeHeader = tooltipContent.createDiv({ cls: "timeline-tooltip-time" });
-    timeHeader.setText(task.time);
+    if (tagStyle && tagStyle.emoji) {
+      const emojiSpan = timeHeader.createSpan({ cls: "timeline-tooltip-time-emoji" });
+      emojiSpan.setText(tagStyle.emoji);
+    }
+    const timeText = timeHeader.createSpan();
+    timeText.setText(task.time);
     const taskText = tooltipContent.createDiv({ cls: "timeline-tooltip-task" });
     taskText.textContent = `[${task.status}] `;
     await this.renderTaskContent(taskText, task.content);
