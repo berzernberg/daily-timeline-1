@@ -116,7 +116,7 @@ export class DailyNotesParser {
   }
 
   private extractFirstTag(content: string): string | undefined {
-    const tagRegex = /#([a-zA-Z0-9_-]+)/;
+    const tagRegex = /#([a-zA-Z0-9_/-]+)/;
     const match = content.match(tagRegex);
     return match ? match[1].toLowerCase() : undefined;
   }
