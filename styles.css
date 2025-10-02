@@ -732,24 +732,177 @@
 
 .embedded-timeline-controls {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px;
+  flex-direction: column;
+  padding: 8px;
   background: var(--background-secondary);
   border-radius: 6px;
-  margin-bottom: 16px;
-  gap: 12px;
+  margin-bottom: 12px;
+  gap: 8px;
+}
+
+.embedded-timeline-controls-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
-.embedded-timeline-info {
-  font-size: 0.9em;
-  color: var(--text-muted);
-  font-weight: 500;
-  padding: 6px 12px;
+.embedded-timeline-nav-group {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.embedded-timeline-btn-compact {
+  padding: 4px 10px !important;
+  font-size: 0.85em !important;
+  min-height: 28px;
+  border-radius: 4px;
+}
+
+.embedded-timeline-zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
   background: var(--background-primary);
   border-radius: 4px;
   border: 1px solid var(--background-modifier-border);
+}
+
+.embedded-timeline-zoom-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 3px;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.embedded-timeline-zoom-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+  border-color: var(--interactive-accent);
+}
+
+.embedded-timeline-zoom-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.embedded-timeline-zoom-slider {
+  width: 80px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--background-modifier-border);
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.embedded-timeline-zoom-slider::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--interactive-accent);
+  cursor: pointer;
+  border: 2px solid var(--background-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.embedded-timeline-zoom-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--interactive-accent);
+  cursor: pointer;
+  border: 2px solid var(--background-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.embedded-timeline-zoom-label {
+  font-size: 0.75em;
+  color: var(--text-muted);
+  font-weight: 500;
+  min-width: 35px;
+  text-align: center;
+}
+
+.embedded-timeline-view-mode {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+
+.embedded-timeline-select-compact {
+  padding: 4px 24px 4px 8px !important;
+  font-size: 0.85em !important;
+  min-height: 28px;
+  border-radius: 4px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  color: var(--text-normal);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 12 12"><path fill="currentColor" d="M6 9L1 4h10z"/></svg>');
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 10px;
+}
+
+.embedded-timeline-select-compact:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+.embedded-timeline-month-picker {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex: 1;
+}
+
+.embedded-timeline-custom-picker {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex: 1;
+}
+
+.embedded-timeline-date-input-compact {
+  padding: 4px 8px;
+  font-size: 0.85em;
+  min-height: 28px;
+  border-radius: 4px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  color: var(--text-normal);
+  cursor: pointer;
+  flex: 1;
+  min-width: 120px;
+}
+
+.embedded-timeline-date-input-compact:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+.embedded-timeline-date-separator {
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: 0.85em;
 }
 
 .embedded-timeline-scroll {

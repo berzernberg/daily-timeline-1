@@ -27,6 +27,11 @@ export class EmbeddedTimeline {
   private zoomSlider: HTMLInputElement | null = null;
   private zoomLabel: HTMLElement | null = null;
   private configParser: CodeblockConfigParser;
+  private currentViewMode: "month" | "custom" = "custom";
+  private monthSelectEl: HTMLSelectElement | null = null;
+  private customStartDateInputEl: HTMLInputElement | null = null;
+  private customEndDateInputEl: HTMLInputElement | null = null;
+  private viewModeContainerEl: HTMLElement | null = null;
 
   constructor(plugin: DailyNotesTimelinePlugin, container: HTMLElement, config: CodeblockConfig) {
     this.plugin = plugin;
@@ -64,53 +69,47 @@ export class EmbeddedTimeline {
   private async renderControls(): Promise<void> {
     const controlsDiv = this.container.createDiv({ cls: "embedded-timeline-controls" });
 
-    const leftGroup = controlsDiv.createDiv({ cls: "timeline-controls-left" });
-    const centerGroup = controlsDiv.createDiv({ cls: "timeline-controls-center" });
-    const rightGroup = controlsDiv.createDiv({ cls: "timeline-controls-right" });
+    const topRow = controlsDiv.createDiv({ cls: "embedded-timeline-controls-row" });
+    const bottomRow = controlsDiv.createDiv({ cls: "embedded-timeline-controls-row" });
 
-    const prevButton = leftGroup.createEl("button", {
-      text: "← Previous",
-      cls: "mod-cta",
+    const navGroup = topRow.createDiv({ cls: "embedded-timeline-nav-group" });
+    const prevButton = navGroup.createEl("button", {
+      text: "←",
+      cls: "mod-cta embedded-timeline-btn-compact",
+      attr: { "aria-label": "Previous" },
     });
     prevButton.addEventListener("click", async () => {
       await this.navigatePrevious();
     });
 
-    const nextButton = leftGroup.createEl("button", {
-      text: "Next →",
-      cls: "mod-cta",
-    });
-    nextButton.addEventListener("click", async () => {
-      await this.navigateNext();
-    });
-
-    const todayButton = leftGroup.createEl("button", {
+    const todayButton = navGroup.createEl("button", {
       text: "Today",
-      cls: "mod-cta",
+      cls: "mod-cta embedded-timeline-btn-compact",
     });
     todayButton.addEventListener("click", async () => {
       await this.navigateToToday();
     });
 
-    const resetButton = leftGroup.createEl("button", {
+    const nextButton = navGroup.createEl("button", {
+      text: "→",
+      cls: "mod-cta embedded-timeline-btn-compact",
+      attr: { "aria-label": "Next" },
+    });
+    nextButton.addEventListener("click", async () => {
+      await this.navigateNext();
+    });
+
+    this.renderZoomControls(topRow);
+
+    const resetButton = topRow.createEl("button", {
       text: "Reset",
-      cls: "mod-warning",
+      cls: "mod-warning embedded-timeline-btn-compact",
     });
     resetButton.addEventListener("click", async () => {
       await this.resetToInitial();
     });
 
-    this.renderZoomControls(centerGroup);
-
-    const infoDiv = rightGroup.createDiv({ cls: "embedded-timeline-info" });
-    this.updateInfoDisplay(infoDiv);
-  }
-
-  private updateInfoDisplay(infoDiv: HTMLElement): void {
-    infoDiv.empty();
-    const startStr = this.formatDateDisplay(this.currentStartDate);
-    const endStr = this.formatDateDisplay(this.currentEndDate);
-    infoDiv.setText(`${startStr} — ${endStr}`);
+    this.renderViewModeSelector(bottomRow);
   }
 
   private formatDateDisplay(date: Date): string {
@@ -121,37 +120,174 @@ export class EmbeddedTimeline {
     });
   }
 
+  private formatDateForInput(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  private async renderViewModeSelector(container: HTMLElement): Promise<void> {
+    const viewModeContainer = container.createDiv({ cls: "embedded-timeline-view-mode" });
+    this.viewModeContainerEl = viewModeContainer;
+
+    const modeSelect = viewModeContainer.createEl("select", { cls: "embedded-timeline-select-compact" });
+    modeSelect.createEl("option", { value: "month", text: "Month" });
+    modeSelect.createEl("option", { value: "custom", text: "Custom" });
+    modeSelect.value = this.currentViewMode;
+
+    modeSelect.addEventListener("change", async () => {
+      this.currentViewMode = modeSelect.value as "month" | "custom";
+      this.updateViewModeControls();
+    });
+
+    const monthContainer = viewModeContainer.createDiv({ cls: "embedded-timeline-month-picker" });
+    const monthSelect = monthContainer.createEl("select", { cls: "embedded-timeline-select-compact" });
+    this.monthSelectEl = monthSelect;
+    await this.populateMonthSelect(monthSelect);
+
+    monthSelect.addEventListener("change", async () => {
+      const [year, month] = monthSelect.value.split("-").map(Number);
+      this.currentStartDate = new Date(year, month, 1);
+      this.currentEndDate = new Date(year, month + 1, 0);
+      this.zoomLevel = ZOOM_CONFIG.DEFAULT;
+      await this.renderTimeline();
+      this.updateZoomSlider();
+    });
+
+    const customContainer = viewModeContainer.createDiv({ cls: "embedded-timeline-custom-picker" });
+
+    const startDateInput = customContainer.createEl("input", {
+      type: "date",
+      cls: "embedded-timeline-date-input-compact",
+    });
+    this.customStartDateInputEl = startDateInput;
+    startDateInput.value = this.formatDateForInput(this.currentStartDate);
+
+    const separator = customContainer.createSpan({ cls: "embedded-timeline-date-separator", text: "—" });
+
+    const endDateInput = customContainer.createEl("input", {
+      type: "date",
+      cls: "embedded-timeline-date-input-compact",
+    });
+    this.customEndDateInputEl = endDateInput;
+    endDateInput.value = this.formatDateForInput(this.currentEndDate);
+
+    startDateInput.addEventListener("change", async () => {
+      await this.handleCustomDateChange();
+    });
+
+    endDateInput.addEventListener("change", async () => {
+      await this.handleCustomDateChange();
+    });
+
+    this.updateViewModeControls();
+  }
+
+  private async handleCustomDateChange(): Promise<void> {
+    if (!this.customStartDateInputEl || !this.customEndDateInputEl) return;
+
+    const startDateStr = this.customStartDateInputEl.value;
+    const endDateStr = this.customEndDateInputEl.value;
+
+    if (!startDateStr || !endDateStr) return;
+
+    const newStartDate = new Date(startDateStr);
+    const newEndDate = new Date(endDateStr);
+
+    if (newEndDate < newStartDate) {
+      this.customStartDateInputEl.value = this.formatDateForInput(this.currentStartDate);
+      this.customEndDateInputEl.value = this.formatDateForInput(this.currentEndDate);
+      return;
+    }
+
+    const daysDiff = Math.ceil((newEndDate.getTime() - newStartDate.getTime()) / (1000 * 60 * 60 * 24));
+    if (daysDiff > 365) {
+      this.customStartDateInputEl.value = this.formatDateForInput(this.currentStartDate);
+      this.customEndDateInputEl.value = this.formatDateForInput(this.currentEndDate);
+      return;
+    }
+
+    this.currentStartDate = newStartDate;
+    this.currentEndDate = newEndDate;
+
+    this.zoomLevel = ZOOM_CONFIG.DEFAULT;
+    await this.renderTimeline();
+    this.updateZoomSlider();
+  }
+
+  private updateViewModeControls(): void {
+    if (!this.monthSelectEl || !this.customStartDateInputEl || !this.customEndDateInputEl) return;
+
+    const monthContainer = this.monthSelectEl.parentElement;
+    const customContainer = this.customStartDateInputEl.parentElement;
+
+    if (this.currentViewMode === "month") {
+      if (monthContainer) monthContainer.style.display = "flex";
+      if (customContainer) customContainer.style.display = "none";
+    } else {
+      if (monthContainer) monthContainer.style.display = "none";
+      if (customContainer) customContainer.style.display = "flex";
+    }
+  }
+
+  private async populateMonthSelect(select: HTMLSelectElement): Promise<void> {
+    const availableMonths = await this.plugin.parser.getAvailableMonths(
+      this.plugin.settings.dailyNotesFolder,
+      this.plugin.settings.dateFormat
+    );
+
+    select.empty();
+
+    for (const monthKey of availableMonths) {
+      const [year, month] = monthKey.split("-").map(Number);
+      const date = new Date(year, month, 1);
+      const option = select.createEl("option");
+      option.value = monthKey;
+      option.text = date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+      });
+
+      if (
+        year === this.currentStartDate.getFullYear() &&
+        month === this.currentStartDate.getMonth()
+      ) {
+        option.selected = true;
+      }
+    }
+  }
+
   private renderZoomControls(container: HTMLElement): void {
-    const zoomContainer = container.createDiv({ cls: "timeline-zoom-controls" });
+    const zoomContainer = container.createDiv({ cls: "embedded-timeline-zoom-controls" });
 
     const zoomOutButton = zoomContainer.createEl("button", {
-      cls: "timeline-zoom-button",
+      cls: "embedded-timeline-zoom-btn",
       attr: { "aria-label": "Zoom out" },
     });
-    zoomOutButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path><line x1="8" y1="11" x2="14" y2="11"></line></svg>';
+    zoomOutButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path><line x1="8" y1="11" x2="14" y2="11"></line></svg>';
     zoomOutButton.addEventListener("click", () => {
       const newZoom = Math.max(ZOOM_CONFIG.MIN, this.zoomLevel - ZOOM_CONFIG.STEP);
       this.applyZoom(newZoom);
     });
 
-    const sliderContainer = zoomContainer.createDiv({ cls: "timeline-zoom-slider-container" });
-    const zoomSlider = sliderContainer.createEl("input", {
+    const zoomSlider = zoomContainer.createEl("input", {
       type: "range",
-      cls: "timeline-zoom-slider",
+      cls: "embedded-timeline-zoom-slider",
     });
     zoomSlider.min = String(ZOOM_CONFIG.MIN * 100);
     zoomSlider.max = String(ZOOM_CONFIG.MAX * 100);
     zoomSlider.value = String(this.zoomLevel * 100);
     zoomSlider.step = String(ZOOM_CONFIG.STEP * 100);
 
-    const zoomLabel = sliderContainer.createDiv({ cls: "timeline-zoom-label" });
+    const zoomLabel = zoomContainer.createDiv({ cls: "embedded-timeline-zoom-label" });
     zoomLabel.setText(`${Math.round(this.zoomLevel * 100)}%`);
 
     const zoomInButton = zoomContainer.createEl("button", {
-      cls: "timeline-zoom-button",
+      cls: "embedded-timeline-zoom-btn",
       attr: { "aria-label": "Zoom in" },
     });
-    zoomInButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>';
+    zoomInButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>';
     zoomInButton.addEventListener("click", () => {
       const newZoom = Math.min(ZOOM_CONFIG.MAX, this.zoomLevel + ZOOM_CONFIG.STEP);
       this.applyZoom(newZoom);
