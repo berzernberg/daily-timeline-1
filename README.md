@@ -81,7 +81,7 @@ startDate: 2025-10-01
 **For Custom Mode:**
 
 Option 1 - Quick presets:
-```timeline
+```daily-timeline
 mode: custom
 show: this-week
 ```
