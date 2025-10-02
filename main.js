@@ -354,6 +354,7 @@ var TimelineView = class extends import_obsidian.ItemView {
       return aMinutes - bMinutes;
     });
     const MIN_SPACING_PIXELS = 25;
+    const MAX_GROUP_SPAN_PIXELS = 60;
     const groups = [];
     let currentGroup = [sortedTasks[0]];
     for (let i = 1; i < sortedTasks.length; i++) {
@@ -362,7 +363,9 @@ var TimelineView = class extends import_obsidian.ItemView {
       const prevPercentage = (prevTask.hour * 60 + prevTask.minute) / (24 * 60) * 100;
       const currPercentage = (currTask.hour * 60 + currTask.minute) / (24 * 60) * 100;
       const pixelDiff = Math.abs(currPercentage - prevPercentage) * (segmentWidth / 100);
-      if (pixelDiff < MIN_SPACING_PIXELS) {
+      const firstTaskPercentage = (currentGroup[0].hour * 60 + currentGroup[0].minute) / (24 * 60) * 100;
+      const groupSpan = Math.abs(currPercentage - firstTaskPercentage) * (segmentWidth / 100);
+      if (pixelDiff < MIN_SPACING_PIXELS && groupSpan < MAX_GROUP_SPAN_PIXELS) {
         currentGroup.push(currTask);
       } else {
         if (currentGroup.length > 1) {

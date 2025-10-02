@@ -390,6 +390,7 @@ export class TimelineView extends ItemView {
     });
 
     const MIN_SPACING_PIXELS = 25;
+    const MAX_GROUP_SPAN_PIXELS = 60;
     const groups: (TaskItem | GroupedTask)[] = [];
     let currentGroup: TaskItem[] = [sortedTasks[0]];
 
@@ -402,7 +403,10 @@ export class TimelineView extends ItemView {
 
       const pixelDiff = Math.abs(currPercentage - prevPercentage) * (segmentWidth / 100);
 
-      if (pixelDiff < MIN_SPACING_PIXELS) {
+      const firstTaskPercentage = ((currentGroup[0].hour * 60 + currentGroup[0].minute) / (24 * 60)) * 100;
+      const groupSpan = Math.abs(currPercentage - firstTaskPercentage) * (segmentWidth / 100);
+
+      if (pixelDiff < MIN_SPACING_PIXELS && groupSpan < MAX_GROUP_SPAN_PIXELS) {
         currentGroup.push(currTask);
       } else {
         if (currentGroup.length > 1) {
