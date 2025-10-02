@@ -140,13 +140,13 @@ export class DailyNotesParser {
 
       if (match) {
         if (currentTask) {
+          this.finalizeTask(currentTask);
           tasks.push(currentTask);
         }
 
         const [, status, time, content] = match;
         const [hour, minute] = time.split(":").map(Number);
         const firstTag = this.extractFirstTag(content);
-        const hasAttachment = this.hasImageAttachment(content);
 
         currentTask = {
           status: status,
@@ -157,12 +157,13 @@ export class DailyNotesParser {
           hour: hour,
           minute: minute,
           firstTag: firstTag,
-          hasAttachment: hasAttachment,
+          hasAttachment: false,
         };
       } else if (currentTask && line.trim().startsWith("-") && line.includes("\t")) {
         currentTask.subItems.push(line.trim().substring(1).trim());
       } else if (currentTask && !line.trim().startsWith("-") && line.trim() !== "") {
         if (currentTask) {
+          this.finalizeTask(currentTask);
           tasks.push(currentTask);
           currentTask = null;
         }
@@ -170,9 +171,22 @@ export class DailyNotesParser {
     }
 
     if (currentTask) {
+      this.finalizeTask(currentTask);
       tasks.push(currentTask);
     }
 
     return tasks;
+  }
+
+  private finalizeTask(task: TaskItem): void {
+    task.hasAttachment = this.hasImageAttachment(task.content);
+    if (!task.hasAttachment) {
+      for (const subItem of task.subItems) {
+        if (this.hasImageAttachment(subItem)) {
+          task.hasAttachment = true;
+          break;
+        }
+      }
+    }
   }
 }

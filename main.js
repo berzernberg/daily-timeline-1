@@ -976,12 +976,12 @@ var DailyNotesParser = class {
       const match = line.match(taskRegex);
       if (match) {
         if (currentTask) {
+          this.finalizeTask(currentTask);
           tasks.push(currentTask);
         }
         const [, status, time, content2] = match;
         const [hour, minute] = time.split(":").map(Number);
         const firstTag = this.extractFirstTag(content2);
-        const hasAttachment = this.hasImageAttachment(content2);
         currentTask = {
           status,
           time,
@@ -991,21 +991,34 @@ var DailyNotesParser = class {
           hour,
           minute,
           firstTag,
-          hasAttachment
+          hasAttachment: false
         };
       } else if (currentTask && line.trim().startsWith("-") && line.includes("	")) {
         currentTask.subItems.push(line.trim().substring(1).trim());
       } else if (currentTask && !line.trim().startsWith("-") && line.trim() !== "") {
         if (currentTask) {
+          this.finalizeTask(currentTask);
           tasks.push(currentTask);
           currentTask = null;
         }
       }
     }
     if (currentTask) {
+      this.finalizeTask(currentTask);
       tasks.push(currentTask);
     }
     return tasks;
+  }
+  finalizeTask(task) {
+    task.hasAttachment = this.hasImageAttachment(task.content);
+    if (!task.hasAttachment) {
+      for (const subItem of task.subItems) {
+        if (this.hasImageAttachment(subItem)) {
+          task.hasAttachment = true;
+          break;
+        }
+      }
+    }
   }
 };
 
