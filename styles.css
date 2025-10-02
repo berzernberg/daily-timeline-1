@@ -487,8 +487,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   padding: 0;
   background: var(--background-secondary);
   border: 1px solid var(--background-modifier-border);
@@ -503,6 +503,11 @@
   background: var(--background-modifier-hover);
   color: var(--text-normal);
   border-color: var(--interactive-accent);
+}
+
+.timeline-zoom-button svg {
+  width: 20px;
+  height: 20px;
 }
 
 .timeline-zoom-button:active {
