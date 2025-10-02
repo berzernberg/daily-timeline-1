@@ -29,6 +29,7 @@ export class EmbeddedTimeline {
   private configParser: CodeblockConfigParser;
   private currentViewMode: "month" | "custom" = "custom";
   private monthSelectEl: HTMLSelectElement | null = null;
+  private quickSelectEl: HTMLSelectElement | null = null;
   private customStartDateInputEl: HTMLInputElement | null = null;
   private customEndDateInputEl: HTMLInputElement | null = null;
   private viewModeContainerEl: HTMLElement | null = null;
@@ -157,16 +158,35 @@ export class EmbeddedTimeline {
 
     const customContainer = viewModeContainer.createDiv({ cls: "embedded-timeline-custom-picker" });
 
-    const startDateInput = customContainer.createEl("input", {
+    const quickSelect = customContainer.createEl("select", { cls: "embedded-timeline-select-compact" });
+    this.quickSelectEl = quickSelect;
+    quickSelect.createEl("option", { value: "custom", text: "Custom dates" });
+    quickSelect.createEl("option", { value: "last7days", text: "Last 7 days" });
+    quickSelect.createEl("option", { value: "last30days", text: "Last 30 days" });
+    quickSelect.createEl("option", { value: "thisweek", text: "This week" });
+    quickSelect.createEl("option", { value: "thismonth", text: "This month" });
+    quickSelect.createEl("option", { value: "last3months", text: "Last 3 months" });
+    quickSelect.value = "custom";
+
+    quickSelect.addEventListener("change", async () => {
+      const preset = quickSelect.value;
+      if (preset !== "custom") {
+        this.applyQuickRangePreset(preset as any);
+      }
+    });
+
+    const datePickersContainer = customContainer.createDiv({ cls: "embedded-timeline-date-pickers" });
+
+    const startDateInput = datePickersContainer.createEl("input", {
       type: "date",
       cls: "embedded-timeline-date-input-compact",
     });
     this.customStartDateInputEl = startDateInput;
     startDateInput.value = this.formatDateForInput(this.currentStartDate);
 
-    const separator = customContainer.createSpan({ cls: "embedded-timeline-date-separator", text: "—" });
+    const separator = datePickersContainer.createSpan({ cls: "embedded-timeline-date-separator", text: "—" });
 
-    const endDateInput = customContainer.createEl("input", {
+    const endDateInput = datePickersContainer.createEl("input", {
       type: "date",
       cls: "embedded-timeline-date-input-compact",
     });
@@ -211,8 +231,63 @@ export class EmbeddedTimeline {
     this.currentStartDate = newStartDate;
     this.currentEndDate = newEndDate;
 
+    if (this.quickSelectEl) {
+      this.quickSelectEl.value = "custom";
+    }
+
     this.zoomLevel = ZOOM_CONFIG.DEFAULT;
     await this.renderTimeline();
+    this.updateZoomSlider();
+  }
+
+  private applyQuickRangePreset(preset: "last7days" | "last30days" | "thisweek" | "thismonth" | "last3months"): void {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    let startDate: Date;
+    let endDate: Date;
+
+    switch (preset) {
+      case "last7days":
+        endDate = new Date(now);
+        startDate = new Date(now);
+        startDate.setDate(startDate.getDate() - 6);
+        break;
+      case "last30days":
+        endDate = new Date(now);
+        startDate = new Date(now);
+        startDate.setDate(startDate.getDate() - 29);
+        break;
+      case "thisweek":
+        const dayOfWeek = now.getDay();
+        startDate = new Date(now);
+        startDate.setDate(startDate.getDate() - dayOfWeek);
+        endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + 6);
+        break;
+      case "thismonth":
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        break;
+      case "last3months":
+        endDate = new Date(now);
+        startDate = new Date(now);
+        startDate.setMonth(startDate.getMonth() - 3);
+        break;
+      default:
+        return;
+    }
+
+    this.currentStartDate = startDate;
+    this.currentEndDate = endDate;
+
+    if (this.customStartDateInputEl && this.customEndDateInputEl) {
+      this.customStartDateInputEl.value = this.formatDateForInput(startDate);
+      this.customEndDateInputEl.value = this.formatDateForInput(endDate);
+    }
+
+    this.zoomLevel = ZOOM_CONFIG.DEFAULT;
+    this.renderTimeline();
     this.updateZoomSlider();
   }
 

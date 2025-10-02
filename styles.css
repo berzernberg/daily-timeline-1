@@ -781,7 +781,6 @@
   background: var(--background-secondary);
   border: 1px solid var(--background-modifier-border);
   border-radius: 3px;
-  color: var(--text-muted);
   cursor: pointer;
   flex-shrink: 0;
   transition: all 0.2s ease;
@@ -789,13 +788,13 @@
 
 .embedded-timeline-zoom-btn:hover {
   background: var(--background-modifier-hover);
-  color: var(--text-normal);
   border-color: var(--interactive-accent);
 }
 
 .embedded-timeline-zoom-btn svg {
   width: 14px;
   height: 14px;
+  stroke: var(--text-normal);
 }
 
 .embedded-timeline-zoom-slider {
@@ -877,9 +876,16 @@
 
 .embedded-timeline-custom-picker {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
   flex: 1;
+  flex-wrap: wrap;
+}
+
+.embedded-timeline-date-pickers {
+  display: flex;
+  gap: 6px;
+  align-items: center;
 }
 
 .embedded-timeline-date-input-compact {
@@ -891,8 +897,7 @@
   border: 1px solid var(--background-modifier-border);
   color: var(--text-normal);
   cursor: pointer;
-  flex: 1;
-  min-width: 120px;
+  width: 130px;
 }
 
 .embedded-timeline-date-input-compact:hover {
