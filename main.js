@@ -51,6 +51,7 @@ var TimelineView = class extends import_obsidian.ItemView {
     __publicField(this, "tooltips", []);
     __publicField(this, "zoomLevel", ZOOM_CONFIG.DEFAULT);
     __publicField(this, "timelineScrollEl", null);
+    __publicField(this, "timelineContainerEl", null);
     __publicField(this, "isDragging", false);
     __publicField(this, "dragStartX", 0);
     __publicField(this, "dragStartScrollLeft", 0);
@@ -209,8 +210,8 @@ var TimelineView = class extends import_obsidian.ItemView {
     }
   }
   applyZoom(newZoomLevel, anchorX) {
-    if (!this.timelineScrollEl) return;
-    const scrollContainer = this.timelineScrollEl;
+    if (!this.timelineContainerEl) return;
+    const scrollContainer = this.timelineContainerEl;
     const scrollLeft = scrollContainer.scrollLeft;
     const containerWidth = scrollContainer.clientWidth;
     const scrollWidth = scrollContainer.scrollWidth;
@@ -223,19 +224,19 @@ var TimelineView = class extends import_obsidian.ItemView {
     this.zoomLevel = newZoomLevel;
     this.updateZoomSlider();
     this.renderTimeline().then(() => {
-      if (!this.timelineScrollEl) return;
-      const newScrollWidth = this.timelineScrollEl.scrollWidth;
+      if (!this.timelineContainerEl) return;
+      const newScrollWidth = this.timelineContainerEl.scrollWidth;
       const newAnchorPosition = anchorPosition * newScrollWidth;
       const newScrollLeft = anchorX !== void 0 ? newAnchorPosition - anchorX : newAnchorPosition - containerWidth / 2;
-      this.timelineScrollEl.scrollLeft = Math.max(0, newScrollLeft);
+      this.timelineContainerEl.scrollLeft = Math.max(0, newScrollLeft);
     });
   }
-  setupTimelineInteractions(timelineScroll) {
-    timelineScroll.addEventListener("wheel", (e) => {
+  setupTimelineInteractions(timelineContainer) {
+    timelineContainer.addEventListener("wheel", (e) => {
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
-        const rect = timelineScroll.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
+        const rect = timelineContainer.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left - timelineContainer.scrollLeft;
         const delta = -e.deltaY;
         const zoomFactor = delta > 0 ? ZOOM_CONFIG.STEP : -ZOOM_CONFIG.STEP;
         const newZoom = Math.max(
@@ -245,37 +246,42 @@ var TimelineView = class extends import_obsidian.ItemView {
         this.applyZoom(newZoom, mouseX);
       } else {
         e.preventDefault();
-        timelineScroll.scrollLeft += e.deltaY;
+        timelineContainer.scrollLeft += e.deltaY;
       }
     });
-    timelineScroll.addEventListener("mousedown", (e) => {
+    timelineContainer.addEventListener("mousedown", (e) => {
       if (e.button !== 0) return;
+      const target = e.target;
+      if (target.closest(".timeline-task") || target.closest("a")) {
+        return;
+      }
+      e.preventDefault();
       this.isDragging = true;
       this.dragStartX = e.clientX;
-      this.dragStartScrollLeft = timelineScroll.scrollLeft;
-      timelineScroll.style.cursor = "grabbing";
-      timelineScroll.style.userSelect = "none";
+      this.dragStartScrollLeft = timelineContainer.scrollLeft;
+      timelineContainer.style.cursor = "grabbing";
+      timelineContainer.style.userSelect = "none";
     });
     const handleMouseMove = (e) => {
-      if (!this.isDragging) return;
+      if (!this.isDragging || !this.timelineContainerEl) return;
       e.preventDefault();
       const deltaX = e.clientX - this.dragStartX;
-      timelineScroll.scrollLeft = this.dragStartScrollLeft - deltaX;
+      this.timelineContainerEl.scrollLeft = this.dragStartScrollLeft - deltaX;
     };
     const handleMouseUp = () => {
-      if (this.isDragging) {
+      if (this.isDragging && this.timelineContainerEl) {
         this.isDragging = false;
-        timelineScroll.style.cursor = "grab";
-        timelineScroll.style.userSelect = "";
+        this.timelineContainerEl.style.cursor = "grab";
+        this.timelineContainerEl.style.userSelect = "";
       }
     };
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
-    timelineScroll.addEventListener("mouseleave", () => {
-      if (this.isDragging) {
+    timelineContainer.addEventListener("mouseleave", () => {
+      if (this.isDragging && this.timelineContainerEl) {
         this.isDragging = false;
-        timelineScroll.style.cursor = "grab";
-        timelineScroll.style.userSelect = "";
+        this.timelineContainerEl.style.cursor = "grab";
+        this.timelineContainerEl.style.userSelect = "";
       }
     });
   }
@@ -312,7 +318,6 @@ var TimelineView = class extends import_obsidian.ItemView {
       cls: "timeline-scroll"
     });
     this.timelineScrollEl = timelineScroll;
-    this.setupTimelineInteractions(timelineScroll);
     const dailyNotes = await this.plugin.parser.parseDailyNotes(
       this.plugin.settings.dailyNotesFolder,
       this.plugin.settings.dateFormat,
@@ -330,6 +335,8 @@ var TimelineView = class extends import_obsidian.ItemView {
   }
   async renderContinuousTimeline(container, dailyNotes) {
     const timelineContainer = container.createDiv({ cls: "timeline-continuous" });
+    this.timelineContainerEl = timelineContainer;
+    this.setupTimelineInteractions(timelineContainer);
     const timelineTrack = timelineContainer.createDiv({ cls: "timeline-track-continuous" });
     const segmentWidth = ZOOM_CONFIG.BASE_SEGMENT_WIDTH * this.zoomLevel;
     const totalWidth = segmentWidth * dailyNotes.length;

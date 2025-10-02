@@ -113,6 +113,11 @@
   overflow-x: auto;
   overflow-y: visible;
   padding-bottom: 20px;
+  cursor: grab;
+}
+
+.timeline-continuous:active {
+  cursor: grabbing;
 }
 
 .timeline-track-continuous {

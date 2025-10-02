@@ -20,6 +20,7 @@ export class TimelineView extends ItemView {
   private tooltips: HTMLElement[] = [];
   private zoomLevel: number = ZOOM_CONFIG.DEFAULT;
   private timelineScrollEl: HTMLElement | null = null;
+  private timelineContainerEl: HTMLElement | null = null;
   private isDragging: boolean = false;
   private dragStartX: number = 0;
   private dragStartScrollLeft: number = 0;
@@ -206,9 +207,9 @@ export class TimelineView extends ItemView {
   }
 
   private applyZoom(newZoomLevel: number, anchorX?: number): void {
-    if (!this.timelineScrollEl) return;
+    if (!this.timelineContainerEl) return;
 
-    const scrollContainer = this.timelineScrollEl;
+    const scrollContainer = this.timelineContainerEl;
     const scrollLeft = scrollContainer.scrollLeft;
     const containerWidth = scrollContainer.clientWidth;
     const scrollWidth = scrollContainer.scrollWidth;
@@ -224,24 +225,24 @@ export class TimelineView extends ItemView {
     this.updateZoomSlider();
 
     this.renderTimeline().then(() => {
-      if (!this.timelineScrollEl) return;
+      if (!this.timelineContainerEl) return;
 
-      const newScrollWidth = this.timelineScrollEl.scrollWidth;
+      const newScrollWidth = this.timelineContainerEl.scrollWidth;
       const newAnchorPosition = anchorPosition * newScrollWidth;
       const newScrollLeft = anchorX !== undefined
         ? newAnchorPosition - anchorX
         : newAnchorPosition - containerWidth / 2;
 
-      this.timelineScrollEl.scrollLeft = Math.max(0, newScrollLeft);
+      this.timelineContainerEl.scrollLeft = Math.max(0, newScrollLeft);
     });
   }
 
-  private setupTimelineInteractions(timelineScroll: HTMLElement): void {
-    timelineScroll.addEventListener("wheel", (e: WheelEvent) => {
+  private setupTimelineInteractions(timelineContainer: HTMLElement): void {
+    timelineContainer.addEventListener("wheel", (e: WheelEvent) => {
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
-        const rect = timelineScroll.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
+        const rect = timelineContainer.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left - timelineContainer.scrollLeft;
         const delta = -e.deltaY;
         const zoomFactor = delta > 0 ? ZOOM_CONFIG.STEP : -ZOOM_CONFIG.STEP;
         const newZoom = Math.max(
@@ -251,42 +252,47 @@ export class TimelineView extends ItemView {
         this.applyZoom(newZoom, mouseX);
       } else {
         e.preventDefault();
-        timelineScroll.scrollLeft += e.deltaY;
+        timelineContainer.scrollLeft += e.deltaY;
       }
     });
 
-    timelineScroll.addEventListener("mousedown", (e: MouseEvent) => {
+    timelineContainer.addEventListener("mousedown", (e: MouseEvent) => {
       if (e.button !== 0) return;
+      const target = e.target as HTMLElement;
+      if (target.closest(".timeline-task") || target.closest("a")) {
+        return;
+      }
+      e.preventDefault();
       this.isDragging = true;
       this.dragStartX = e.clientX;
-      this.dragStartScrollLeft = timelineScroll.scrollLeft;
-      timelineScroll.style.cursor = "grabbing";
-      timelineScroll.style.userSelect = "none";
+      this.dragStartScrollLeft = timelineContainer.scrollLeft;
+      timelineContainer.style.cursor = "grabbing";
+      timelineContainer.style.userSelect = "none";
     });
 
     const handleMouseMove = (e: MouseEvent) => {
-      if (!this.isDragging) return;
+      if (!this.isDragging || !this.timelineContainerEl) return;
       e.preventDefault();
       const deltaX = e.clientX - this.dragStartX;
-      timelineScroll.scrollLeft = this.dragStartScrollLeft - deltaX;
+      this.timelineContainerEl.scrollLeft = this.dragStartScrollLeft - deltaX;
     };
 
     const handleMouseUp = () => {
-      if (this.isDragging) {
+      if (this.isDragging && this.timelineContainerEl) {
         this.isDragging = false;
-        timelineScroll.style.cursor = "grab";
-        timelineScroll.style.userSelect = "";
+        this.timelineContainerEl.style.cursor = "grab";
+        this.timelineContainerEl.style.userSelect = "";
       }
     };
 
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
 
-    timelineScroll.addEventListener("mouseleave", () => {
-      if (this.isDragging) {
+    timelineContainer.addEventListener("mouseleave", () => {
+      if (this.isDragging && this.timelineContainerEl) {
         this.isDragging = false;
-        timelineScroll.style.cursor = "grab";
-        timelineScroll.style.userSelect = "";
+        this.timelineContainerEl.style.cursor = "grab";
+        this.timelineContainerEl.style.userSelect = "";
       }
     });
   }
@@ -336,7 +342,6 @@ export class TimelineView extends ItemView {
       cls: "timeline-scroll",
     });
     this.timelineScrollEl = timelineScroll;
-    this.setupTimelineInteractions(timelineScroll);
 
     const dailyNotes = await this.plugin.parser.parseDailyNotes(
       this.plugin.settings.dailyNotesFolder,
@@ -358,6 +363,9 @@ export class TimelineView extends ItemView {
 
   private async renderContinuousTimeline(container: HTMLElement, dailyNotes: DailyNote[]): Promise<void> {
     const timelineContainer = container.createDiv({ cls: "timeline-continuous" });
+    this.timelineContainerEl = timelineContainer;
+    this.setupTimelineInteractions(timelineContainer);
+
     const timelineTrack = timelineContainer.createDiv({ cls: "timeline-track-continuous" });
 
     const segmentWidth = ZOOM_CONFIG.BASE_SEGMENT_WIDTH * this.zoomLevel;
