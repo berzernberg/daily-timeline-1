@@ -94,7 +94,7 @@ Available presets:
 - `last-3m` - Last 3 months
 
 Option 2 - Explicit date range:
-```timeline
+```daily-timeline
 mode: custom
 startDate: 2025-10-01
 endDate: 2025-10-15
