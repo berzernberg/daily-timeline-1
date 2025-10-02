@@ -5,7 +5,7 @@ import { DailyNote, TaskItem } from "./types";
 export const VIEW_TYPE_TIMELINE = "daily-notes-timeline";
 
 const ZOOM_CONFIG = {
-  MIN: 0.2,
+  MIN: 0.7,
   MAX: 10.0,
   DEFAULT: 1.0,
   STEP: 0.5,
@@ -214,12 +214,14 @@ export class TimelineView extends ItemView {
     const containerWidth = scrollContainer.clientWidth;
     const scrollWidth = scrollContainer.scrollWidth;
 
-    let anchorPosition: number;
+    let contentAnchorX: number;
     if (anchorX !== undefined) {
-      anchorPosition = (scrollLeft + anchorX) / scrollWidth;
+      contentAnchorX = scrollLeft + anchorX;
     } else {
-      anchorPosition = (scrollLeft + containerWidth / 2) / scrollWidth;
+      contentAnchorX = scrollLeft + containerWidth / 2;
     }
+
+    const anchorRatio = contentAnchorX / scrollWidth;
 
     this.zoomLevel = newZoomLevel;
     this.updateZoomSlider();
@@ -228,10 +230,10 @@ export class TimelineView extends ItemView {
       if (!this.timelineContainerEl) return;
 
       const newScrollWidth = this.timelineContainerEl.scrollWidth;
-      const newAnchorPosition = anchorPosition * newScrollWidth;
+      const newContentAnchorX = anchorRatio * newScrollWidth;
       const newScrollLeft = anchorX !== undefined
-        ? newAnchorPosition - anchorX
-        : newAnchorPosition - containerWidth / 2;
+        ? newContentAnchorX - anchorX
+        : newContentAnchorX - containerWidth / 2;
 
       this.timelineContainerEl.scrollLeft = Math.max(0, newScrollLeft);
     });
@@ -242,7 +244,7 @@ export class TimelineView extends ItemView {
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
         const rect = timelineContainer.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left - timelineContainer.scrollLeft;
+        const mouseX = e.clientX - rect.left;
         const delta = -e.deltaY;
         const zoomFactor = delta > 0 ? ZOOM_CONFIG.STEP : -ZOOM_CONFIG.STEP;
         const newZoom = Math.max(

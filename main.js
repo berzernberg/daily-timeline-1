@@ -35,7 +35,7 @@ var import_obsidian3 = require("obsidian");
 var import_obsidian = require("obsidian");
 var VIEW_TYPE_TIMELINE = "daily-notes-timeline";
 var ZOOM_CONFIG = {
-  MIN: 0.2,
+  MIN: 0.7,
   MAX: 10,
   DEFAULT: 1,
   STEP: 0.5,
@@ -215,19 +215,20 @@ var TimelineView = class extends import_obsidian.ItemView {
     const scrollLeft = scrollContainer.scrollLeft;
     const containerWidth = scrollContainer.clientWidth;
     const scrollWidth = scrollContainer.scrollWidth;
-    let anchorPosition;
+    let contentAnchorX;
     if (anchorX !== void 0) {
-      anchorPosition = (scrollLeft + anchorX) / scrollWidth;
+      contentAnchorX = scrollLeft + anchorX;
     } else {
-      anchorPosition = (scrollLeft + containerWidth / 2) / scrollWidth;
+      contentAnchorX = scrollLeft + containerWidth / 2;
     }
+    const anchorRatio = contentAnchorX / scrollWidth;
     this.zoomLevel = newZoomLevel;
     this.updateZoomSlider();
     this.renderTimeline().then(() => {
       if (!this.timelineContainerEl) return;
       const newScrollWidth = this.timelineContainerEl.scrollWidth;
-      const newAnchorPosition = anchorPosition * newScrollWidth;
-      const newScrollLeft = anchorX !== void 0 ? newAnchorPosition - anchorX : newAnchorPosition - containerWidth / 2;
+      const newContentAnchorX = anchorRatio * newScrollWidth;
+      const newScrollLeft = anchorX !== void 0 ? newContentAnchorX - anchorX : newContentAnchorX - containerWidth / 2;
       this.timelineContainerEl.scrollLeft = Math.max(0, newScrollLeft);
     });
   }
@@ -236,7 +237,7 @@ var TimelineView = class extends import_obsidian.ItemView {
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
         const rect = timelineContainer.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left - timelineContainer.scrollLeft;
+        const mouseX = e.clientX - rect.left;
         const delta = -e.deltaY;
         const zoomFactor = delta > 0 ? ZOOM_CONFIG.STEP : -ZOOM_CONFIG.STEP;
         const newZoom = Math.max(
