@@ -499,7 +499,7 @@ export class TimelineView extends ItemView {
 
   private async renderGroupedTaskInSegment(segment: HTMLElement, groupedTask: GroupedTask): Promise<void> {
     const taskDotContainer = segment.createDiv({ cls: "timeline-task-dot-container timeline-task-grouped" });
-    const clampedPosition = Math.min(groupedTask.position, 98.5);
+    const clampedPosition = Math.min(groupedTask.position, 96);
     taskDotContainer.style.left = `${clampedPosition}%`;
 
     const taskDot = taskDotContainer.createDiv({ cls: "timeline-task-dot" });
@@ -606,7 +606,7 @@ export class TimelineView extends ItemView {
     const totalMinutes = task.hour * 60 + task.minute;
     let percentage = (totalMinutes / (24 * 60)) * 100;
 
-    percentage = Math.min(percentage, 98.5);
+    percentage = Math.min(percentage, 96);
 
     const taskDotContainer = segment.createDiv({ cls: "timeline-task-dot-container" });
     taskDotContainer.style.left = `${percentage}%`;
