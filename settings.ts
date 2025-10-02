@@ -125,10 +125,10 @@ export class TimelineSettingTab extends PluginSettingTab {
 
     new Setting(formContainer)
       .setName("Tag Name")
-      .setDesc("Enter tag name without the # symbol (e.g., 'log' for #log)")
+      .setDesc("Enter tag name without the # symbol (e.g., 'log' for #log, or 'log/work' for #log/work)")
       .addText((text) => {
         tagInput = text.inputEl;
-        text.setPlaceholder("log");
+        text.setPlaceholder("log/work");
       });
 
     new Setting(formContainer)

@@ -418,7 +418,7 @@ export class TimelineView extends ItemView {
 
   private getTagStyle(tag: string | undefined) {
     if (!tag) return null;
-    return this.plugin.settings.tagStyles.find(style => style.tag === tag.toLowerCase());
+    return this.plugin.settings.tagStyles.find(style => style.tag === tag);
   }
 
   private async renderTaskInSegment(segment: HTMLElement, task: TaskItem): Promise<void> {

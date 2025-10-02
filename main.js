@@ -377,7 +377,7 @@ var TimelineView = class extends import_obsidian.ItemView {
   }
   getTagStyle(tag) {
     if (!tag) return null;
-    return this.plugin.settings.tagStyles.find((style) => style.tag === tag.toLowerCase());
+    return this.plugin.settings.tagStyles.find((style) => style.tag === tag);
   }
   async renderTaskInSegment(segment, task) {
     const totalMinutes = task.hour * 60 + task.minute;
@@ -568,9 +568,9 @@ var TimelineSettingTab = class extends import_obsidian2.PluginSettingTab {
     let tagInput;
     let colorInput;
     let emojiInput;
-    new import_obsidian2.Setting(formContainer).setName("Tag Name").setDesc("Enter tag name without the # symbol (e.g., 'log' for #log)").addText((text) => {
+    new import_obsidian2.Setting(formContainer).setName("Tag Name").setDesc("Enter tag name without the # symbol (e.g., 'log' for #log, or 'log/work' for #log/work)").addText((text) => {
       tagInput = text.inputEl;
-      text.setPlaceholder("log");
+      text.setPlaceholder("log/work");
     });
     new import_obsidian2.Setting(formContainer).setName("Color").setDesc("Choose a color for the timeline point").addColorPicker((color) => {
       colorInput = color.colorPickerEl;
