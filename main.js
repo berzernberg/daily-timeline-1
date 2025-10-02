@@ -353,7 +353,7 @@ var TimelineView = class extends import_obsidian.ItemView {
       const bMinutes = b.hour * 60 + b.minute;
       return aMinutes - bMinutes;
     });
-    const OVERLAP_THRESHOLD_PIXELS = 20;
+    const MIN_SPACING_PIXELS = 25;
     const groups = [];
     let currentGroup = [sortedTasks[0]];
     for (let i = 1; i < sortedTasks.length; i++) {
@@ -362,7 +362,7 @@ var TimelineView = class extends import_obsidian.ItemView {
       const prevPercentage = (prevTask.hour * 60 + prevTask.minute) / (24 * 60) * 100;
       const currPercentage = (currTask.hour * 60 + currTask.minute) / (24 * 60) * 100;
       const pixelDiff = Math.abs(currPercentage - prevPercentage) * (segmentWidth / 100);
-      if (pixelDiff < OVERLAP_THRESHOLD_PIXELS) {
+      if (pixelDiff < MIN_SPACING_PIXELS) {
         currentGroup.push(currTask);
       } else {
         if (currentGroup.length > 1) {
@@ -451,9 +451,10 @@ var TimelineView = class extends import_obsidian.ItemView {
     }
     const tooltip = document.body.createDiv({ cls: "timeline-tooltip" });
     this.tooltips.push(tooltip);
+    const tooltipWrapper = tooltip.createDiv({ cls: "timeline-tooltip-wrapper" });
     for (let i = 0; i < groupedTask.tasks.length; i++) {
       const task = groupedTask.tasks[i];
-      const tooltipContent = tooltip.createDiv({ cls: "timeline-tooltip-content" });
+      const tooltipContent = tooltipWrapper.createDiv({ cls: "timeline-tooltip-content" });
       if (i > 0) {
         tooltipContent.addClass("timeline-tooltip-stacked");
       }
@@ -472,14 +473,38 @@ var TimelineView = class extends import_obsidian.ItemView {
     }
     taskDotContainer.addEventListener("mouseenter", () => {
       const rect = taskDotContainer.getBoundingClientRect();
-      tooltip.style.top = `${rect.bottom + 12}px`;
-      tooltip.style.left = `${rect.left + rect.width / 2}px`;
-      tooltip.style.transform = "translateX(-50%)";
+      const viewportHeight = window.innerHeight;
+      const tooltipEstimatedHeight = groupedTask.tasks.length * 120;
+      let tooltipTop = rect.bottom + 12;
+      let tooltipLeft = rect.left + rect.width / 2;
+      let transform = "translateX(-50%)";
+      let isAbove = false;
+      if (tooltipTop + tooltipEstimatedHeight > viewportHeight - 20) {
+        const availableHeight = viewportHeight - tooltipTop - 20;
+        if (availableHeight < 200) {
+          tooltipTop = rect.top - Math.min(tooltipEstimatedHeight, viewportHeight * 0.6) - 12;
+          isAbove = true;
+          if (tooltipTop < 20) {
+            tooltipTop = 20;
+          }
+        }
+      }
+      const maxHeight = Math.min(viewportHeight * 0.7, tooltipEstimatedHeight);
+      tooltipWrapper.style.maxHeight = `${maxHeight}px`;
+      if (isAbove) {
+        tooltip.addClass("tooltip-above");
+      } else {
+        tooltip.removeClass("tooltip-above");
+      }
+      tooltip.style.top = `${tooltipTop}px`;
+      tooltip.style.left = `${tooltipLeft}px`;
+      tooltip.style.transform = transform;
       tooltip.addClass("is-visible");
       taskDotContainer.addClass("is-hovered");
     });
     taskDotContainer.addEventListener("mouseleave", () => {
       tooltip.removeClass("is-visible");
+      tooltip.removeClass("tooltip-above");
       taskDotContainer.removeClass("is-hovered");
     });
     tooltip.addEventListener("mouseenter", () => {
@@ -488,6 +513,7 @@ var TimelineView = class extends import_obsidian.ItemView {
     });
     tooltip.addEventListener("mouseleave", () => {
       tooltip.removeClass("is-visible");
+      tooltip.removeClass("tooltip-above");
       taskDotContainer.removeClass("is-hovered");
     });
   }
@@ -527,7 +553,22 @@ var TimelineView = class extends import_obsidian.ItemView {
     }
     taskDotContainer.addEventListener("mouseenter", () => {
       const rect = taskDotContainer.getBoundingClientRect();
-      tooltip.style.top = `${rect.bottom + 12}px`;
+      const viewportHeight = window.innerHeight;
+      let tooltipTop = rect.bottom + 12;
+      setTimeout(() => {
+        const tooltipHeight = tooltip.offsetHeight;
+        if (tooltipTop + tooltipHeight > viewportHeight - 20) {
+          tooltipTop = rect.top - tooltipHeight - 12;
+          tooltip.addClass("tooltip-above");
+          if (tooltipTop < 20) {
+            tooltipTop = 20;
+          }
+        } else {
+          tooltip.removeClass("tooltip-above");
+        }
+        tooltip.style.top = `${tooltipTop}px`;
+      }, 0);
+      tooltip.style.top = `${tooltipTop}px`;
       tooltip.style.left = `${rect.left + rect.width / 2}px`;
       tooltip.style.transform = "translateX(-50%)";
       tooltip.addClass("is-visible");
@@ -535,6 +576,7 @@ var TimelineView = class extends import_obsidian.ItemView {
     });
     taskDotContainer.addEventListener("mouseleave", () => {
       tooltip.removeClass("is-visible");
+      tooltip.removeClass("tooltip-above");
       taskDotContainer.removeClass("is-hovered");
     });
     tooltip.addEventListener("mouseenter", () => {
@@ -543,6 +585,7 @@ var TimelineView = class extends import_obsidian.ItemView {
     });
     tooltip.addEventListener("mouseleave", () => {
       tooltip.removeClass("is-visible");
+      tooltip.removeClass("tooltip-above");
       taskDotContainer.removeClass("is-hovered");
     });
   }
