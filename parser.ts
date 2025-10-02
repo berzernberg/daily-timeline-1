@@ -121,6 +121,11 @@ export class DailyNotesParser {
     return match ? match[1].toLowerCase() : undefined;
   }
 
+  private hasImageAttachment(content: string): boolean {
+    const imageRegex = /!\[\[.*?\.(png|jpg|jpeg|gif|webp|bmp|svg)\]\]|!\[.*?\]\(.*?\.(png|jpg|jpeg|gif|webp|bmp|svg)\)/i;
+    return imageRegex.test(content);
+  }
+
   private async extractTasks(file: TFile): Promise<TaskItem[]> {
     const content = await this.vault.cachedRead(file);
     const lines = content.split("\n");
@@ -141,6 +146,7 @@ export class DailyNotesParser {
         const [, status, time, content] = match;
         const [hour, minute] = time.split(":").map(Number);
         const firstTag = this.extractFirstTag(content);
+        const hasAttachment = this.hasImageAttachment(content);
 
         currentTask = {
           status: status,
@@ -151,6 +157,7 @@ export class DailyNotesParser {
           hour: hour,
           minute: minute,
           firstTag: firstTag,
+          hasAttachment: hasAttachment,
         };
       } else if (currentTask && line.trim().startsWith("-") && line.includes("\t")) {
         currentTask.subItems.push(line.trim().substring(1).trim());

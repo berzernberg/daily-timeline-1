@@ -7,6 +7,7 @@ export interface TaskItem {
   hour: number;
   minute: number;
   firstTag?: string;
+  hasAttachment?: boolean;
 }
 
 export interface DailyNote {

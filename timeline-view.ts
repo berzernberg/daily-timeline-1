@@ -513,13 +513,19 @@ export class TimelineView extends ItemView {
     countBadge.setText(String(groupedTask.tasks.length));
 
     const emojiContainer = taskDotContainer.createDiv({ cls: "timeline-emoji-stack" });
+    const emojiSet = new Set<string>();
     for (const task of groupedTask.tasks) {
       const tagStyle = this.getTagStyle(task.firstTag);
       if (tagStyle && tagStyle.emoji) {
-        const emojiEl = emojiContainer.createDiv({ cls: "timeline-task-emoji" });
-        emojiEl.setText(tagStyle.emoji);
+        emojiSet.add(tagStyle.emoji);
+      } else if (task.hasAttachment && !emojiSet.has("📸")) {
+        emojiSet.add("📸");
       }
     }
+    emojiSet.forEach(emoji => {
+      const emojiEl = emojiContainer.createDiv({ cls: "timeline-task-emoji" });
+      emojiEl.setText(emoji);
+    });
 
     const tooltip = document.body.createDiv({ cls: "timeline-tooltip" });
     this.tooltips.push(tooltip);
@@ -637,6 +643,9 @@ export class TimelineView extends ItemView {
     if (tagStyle && tagStyle.emoji) {
       const emojiEl = emojiContainer.createDiv({ cls: "timeline-task-emoji" });
       emojiEl.setText(tagStyle.emoji);
+    } else if (task.hasAttachment) {
+      const emojiEl = emojiContainer.createDiv({ cls: "timeline-task-emoji" });
+      emojiEl.setText("📸");
     }
 
     const tooltip = document.body.createDiv({ cls: "timeline-tooltip" });

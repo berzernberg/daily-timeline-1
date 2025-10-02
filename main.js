@@ -456,13 +456,19 @@ var TimelineView = class extends import_obsidian.ItemView {
     const countBadge = taskDot.createDiv({ cls: "timeline-task-count-badge" });
     countBadge.setText(String(groupedTask.tasks.length));
     const emojiContainer = taskDotContainer.createDiv({ cls: "timeline-emoji-stack" });
+    const emojiSet = /* @__PURE__ */ new Set();
     for (const task of groupedTask.tasks) {
       const tagStyle = this.getTagStyle(task.firstTag);
       if (tagStyle && tagStyle.emoji) {
-        const emojiEl = emojiContainer.createDiv({ cls: "timeline-task-emoji" });
-        emojiEl.setText(tagStyle.emoji);
+        emojiSet.add(tagStyle.emoji);
+      } else if (task.hasAttachment && !emojiSet.has("\u{1F4F8}")) {
+        emojiSet.add("\u{1F4F8}");
       }
     }
+    emojiSet.forEach((emoji) => {
+      const emojiEl = emojiContainer.createDiv({ cls: "timeline-task-emoji" });
+      emojiEl.setText(emoji);
+    });
     const tooltip = document.body.createDiv({ cls: "timeline-tooltip" });
     this.tooltips.push(tooltip);
     const tooltipWrapper = tooltip.createDiv({ cls: "timeline-tooltip-wrapper" });
@@ -556,6 +562,9 @@ var TimelineView = class extends import_obsidian.ItemView {
     if (tagStyle && tagStyle.emoji) {
       const emojiEl = emojiContainer.createDiv({ cls: "timeline-task-emoji" });
       emojiEl.setText(tagStyle.emoji);
+    } else if (task.hasAttachment) {
+      const emojiEl = emojiContainer.createDiv({ cls: "timeline-task-emoji" });
+      emojiEl.setText("\u{1F4F8}");
     }
     const tooltip = document.body.createDiv({ cls: "timeline-tooltip" });
     this.tooltips.push(tooltip);
@@ -952,6 +961,10 @@ var DailyNotesParser = class {
     const match = content.match(tagRegex);
     return match ? match[1].toLowerCase() : void 0;
   }
+  hasImageAttachment(content) {
+    const imageRegex = /!\[\[.*?\.(png|jpg|jpeg|gif|webp|bmp|svg)\]\]|!\[.*?\]\(.*?\.(png|jpg|jpeg|gif|webp|bmp|svg)\)/i;
+    return imageRegex.test(content);
+  }
   async extractTasks(file) {
     const content = await this.vault.cachedRead(file);
     const lines = content.split("\n");
@@ -968,6 +981,7 @@ var DailyNotesParser = class {
         const [, status, time, content2] = match;
         const [hour, minute] = time.split(":").map(Number);
         const firstTag = this.extractFirstTag(content2);
+        const hasAttachment = this.hasImageAttachment(content2);
         currentTask = {
           status,
           time,
@@ -976,7 +990,8 @@ var DailyNotesParser = class {
           date: this.extractDateFromFilename(file.name, "YYYY-MM-DD") || "",
           hour,
           minute,
-          firstTag
+          firstTag,
+          hasAttachment
         };
       } else if (currentTask && line.trim().startsWith("-") && line.includes("	")) {
         currentTask.subItems.push(line.trim().substring(1).trim());
