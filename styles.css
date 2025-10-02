@@ -74,9 +74,69 @@
   box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
 }
 
+.timeline-mode-selector {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.timeline-mode-select {
+  min-width: 150px;
+}
+
+.timeline-month-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 .timeline-month-select {
   min-width: 200px;
   max-width: 250px;
+}
+
+.timeline-custom-range-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.timeline-quick-range-select {
+  min-width: 150px;
+}
+
+.timeline-date-inputs {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.timeline-date-label {
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.timeline-date-input {
+  padding: 6px 10px;
+  border-radius: 4px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+  min-width: 140px;
+}
+
+.timeline-date-input:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+.timeline-date-input:focus {
+  outline: none;
+  border-color: var(--background-modifier-border-focus);
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
 }
 
 .timeline-controls button {

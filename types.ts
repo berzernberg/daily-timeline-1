@@ -28,6 +28,10 @@ export interface GroupedTask {
   averageTime: string;
 }
 
+export type ViewMode = "month" | "custom";
+
+export type QuickRangePreset = "last7days" | "last30days" | "thisweek" | "thismonth" | "last3months" | "custom";
+
 export interface TimelineSettings {
   dailyNotesFolder: string;
   dateFormat: string;
@@ -36,6 +40,10 @@ export interface TimelineSettings {
   enableGrouping: boolean;
   minSpacingPixels: number;
   maxGroupSpanPixels: number;
+  viewMode: ViewMode;
+  customStartDate: string;
+  customEndDate: string;
+  lastQuickRangePreset: QuickRangePreset;
 }
 
 export const DEFAULT_SETTINGS: TimelineSettings = {
@@ -46,4 +54,8 @@ export const DEFAULT_SETTINGS: TimelineSettings = {
   enableGrouping: true,
   minSpacingPixels: 25,
   maxGroupSpanPixels: 60,
+  viewMode: "month",
+  customStartDate: "",
+  customEndDate: "",
+  lastQuickRangePreset: "custom",
 };

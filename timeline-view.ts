@@ -1,6 +1,6 @@
 import { ItemView, WorkspaceLeaf } from "obsidian";
 import DailyNotesTimelinePlugin from "./main";
-import { DailyNote, TaskItem, GroupedTask } from "./types";
+import { DailyNote, TaskItem, GroupedTask, ViewMode, QuickRangePreset } from "./types";
 
 export const VIEW_TYPE_TIMELINE = "daily-notes-timeline";
 
@@ -24,14 +24,48 @@ export class TimelineView extends ItemView {
   private isDragging: boolean = false;
   private dragStartX: number = 0;
   private dragStartScrollLeft: number = 0;
+  private viewMode: ViewMode = "month";
+  private monthSelectEl: HTMLSelectElement | null = null;
+  private quickRangeSelectEl: HTMLSelectElement | null = null;
+  private startDateInputEl: HTMLInputElement | null = null;
+  private endDateInputEl: HTMLInputElement | null = null;
+  private customRangeContainerEl: HTMLElement | null = null;
 
   constructor(leaf: WorkspaceLeaf, plugin: DailyNotesTimelinePlugin) {
     super(leaf);
     this.plugin = plugin;
 
+    this.viewMode = this.plugin.settings.viewMode;
+
     const now = new Date();
-    this.startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-    this.endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    if (this.viewMode === "custom" && this.plugin.settings.customStartDate && this.plugin.settings.customEndDate) {
+      this.startDate = this.parseStoredDate(this.plugin.settings.customStartDate);
+      this.endDate = this.parseStoredDate(this.plugin.settings.customEndDate);
+    } else {
+      this.startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      this.endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    }
+  }
+
+  private parseStoredDate(dateStr: string): Date {
+    const [year, month, day] = dateStr.split("-").map(Number);
+    return new Date(year, month - 1, day);
+  }
+
+  private formatDateForStorage(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  private formatDateForInput(date: Date): string {
+    return this.formatDateForStorage(date);
+  }
+
+  private getRangeDurationInDays(): number {
+    const diffTime = Math.abs(this.endDate.getTime() - this.startDate.getTime());
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
   }
 
   getViewType(): string {
@@ -76,8 +110,73 @@ export class TimelineView extends ItemView {
     const centerGroup = controlsDiv.createDiv({ cls: "timeline-controls-center" });
     const rightGroup = controlsDiv.createDiv({ cls: "timeline-controls-right" });
 
-    const monthSelect = rightGroup.createEl("select", { cls: "dropdown timeline-month-select" });
-    await this.populateMonthSelect(monthSelect);
+    this.renderModeSelector(rightGroup);
+    this.renderMonthControls(rightGroup);
+    this.renderCustomRangeControls(rightGroup);
+    this.updateControlsVisibility();
+
+    const prevButton = leftGroup.createEl("button", {
+      text: "← Previous",
+      cls: "mod-cta",
+    });
+    prevButton.addEventListener("click", async () => {
+      await this.navigatePrevious();
+    });
+
+    const nextButton = leftGroup.createEl("button", {
+      text: "Next →",
+      cls: "mod-cta",
+    });
+    nextButton.addEventListener("click", async () => {
+      await this.navigateNext();
+    });
+
+    const todayButton = leftGroup.createEl("button", {
+      text: "Today",
+      cls: "mod-cta",
+    });
+    todayButton.addEventListener("click", async () => {
+      await this.navigateToToday();
+    });
+
+    this.renderZoomControls(centerGroup);
+  }
+
+  private renderModeSelector(container: HTMLElement): void {
+    const modeContainer = container.createDiv({ cls: "timeline-mode-selector" });
+
+    const modeSelect = modeContainer.createEl("select", { cls: "dropdown timeline-mode-select" });
+
+    const monthOption = modeSelect.createEl("option", { value: "month", text: "Month View" });
+    const customOption = modeSelect.createEl("option", { value: "custom", text: "Custom Range" });
+
+    modeSelect.value = this.viewMode;
+
+    modeSelect.addEventListener("change", async () => {
+      this.viewMode = modeSelect.value as ViewMode;
+      this.plugin.settings.viewMode = this.viewMode;
+      await this.plugin.saveSettings();
+      this.updateControlsVisibility();
+
+      if (this.viewMode === "month") {
+        const now = new Date();
+        this.startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        this.endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        if (this.monthSelectEl) {
+          await this.updateMonthSelect(this.monthSelectEl);
+        }
+      }
+
+      await this.renderTimeline();
+    });
+  }
+
+  private renderMonthControls(container: HTMLElement): void {
+    const monthContainer = container.createDiv({ cls: "timeline-month-controls" });
+
+    const monthSelect = monthContainer.createEl("select", { cls: "dropdown timeline-month-select" });
+    this.monthSelectEl = monthSelect;
+    this.populateMonthSelect(monthSelect);
 
     monthSelect.addEventListener("change", async () => {
       const [year, month] = monthSelect.value.split("-").map(Number);
@@ -87,12 +186,178 @@ export class TimelineView extends ItemView {
       await this.renderTimeline();
       this.updateZoomSlider();
     });
+  }
 
-    const prevButton = leftGroup.createEl("button", {
-      text: "← Previous",
-      cls: "mod-cta",
+  private renderCustomRangeControls(container: HTMLElement): void {
+    const customContainer = container.createDiv({ cls: "timeline-custom-range-controls" });
+    this.customRangeContainerEl = customContainer;
+
+    const quickRangeSelect = customContainer.createEl("select", { cls: "dropdown timeline-quick-range-select" });
+    this.quickRangeSelectEl = quickRangeSelect;
+
+    const presets = [
+      { value: "last7days", label: "Last 7 Days" },
+      { value: "last30days", label: "Last 30 Days" },
+      { value: "thisweek", label: "This Week" },
+      { value: "thismonth", label: "This Month" },
+      { value: "last3months", label: "Last 3 Months" },
+      { value: "custom", label: "Custom" }
+    ];
+
+    presets.forEach(preset => {
+      quickRangeSelect.createEl("option", { value: preset.value, text: preset.label });
     });
-    prevButton.addEventListener("click", async () => {
+
+    quickRangeSelect.value = this.plugin.settings.lastQuickRangePreset;
+
+    quickRangeSelect.addEventListener("change", async () => {
+      const preset = quickRangeSelect.value as QuickRangePreset;
+      this.plugin.settings.lastQuickRangePreset = preset;
+      await this.plugin.saveSettings();
+
+      if (preset !== "custom") {
+        this.applyQuickRangePreset(preset);
+      }
+    });
+
+    const dateInputsContainer = customContainer.createDiv({ cls: "timeline-date-inputs" });
+
+    const startLabel = dateInputsContainer.createSpan({ cls: "timeline-date-label", text: "From:" });
+    const startDateInput = dateInputsContainer.createEl("input", {
+      type: "date",
+      cls: "timeline-date-input"
+    });
+    this.startDateInputEl = startDateInput;
+    startDateInput.value = this.formatDateForInput(this.startDate);
+
+    const endLabel = dateInputsContainer.createSpan({ cls: "timeline-date-label", text: "To:" });
+    const endDateInput = dateInputsContainer.createEl("input", {
+      type: "date",
+      cls: "timeline-date-input"
+    });
+    this.endDateInputEl = endDateInput;
+    endDateInput.value = this.formatDateForInput(this.endDate);
+
+    startDateInput.addEventListener("change", async () => {
+      await this.handleCustomDateChange();
+    });
+
+    endDateInput.addEventListener("change", async () => {
+      await this.handleCustomDateChange();
+    });
+  }
+
+  private async handleCustomDateChange(): Promise<void> {
+    if (!this.startDateInputEl || !this.endDateInputEl) return;
+
+    const startDateStr = this.startDateInputEl.value;
+    const endDateStr = this.endDateInputEl.value;
+
+    if (!startDateStr || !endDateStr) return;
+
+    const newStartDate = new Date(startDateStr);
+    const newEndDate = new Date(endDateStr);
+
+    if (newEndDate < newStartDate) {
+      alert("End date must be after or equal to start date");
+      this.startDateInputEl.value = this.formatDateForInput(this.startDate);
+      this.endDateInputEl.value = this.formatDateForInput(this.endDate);
+      return;
+    }
+
+    const daysDiff = Math.ceil((newEndDate.getTime() - newStartDate.getTime()) / (1000 * 60 * 60 * 24));
+    if (daysDiff > 365) {
+      alert("Date range cannot exceed 365 days");
+      this.startDateInputEl.value = this.formatDateForInput(this.startDate);
+      this.endDateInputEl.value = this.formatDateForInput(this.endDate);
+      return;
+    }
+
+    this.startDate = newStartDate;
+    this.endDate = newEndDate;
+
+    this.plugin.settings.customStartDate = this.formatDateForStorage(this.startDate);
+    this.plugin.settings.customEndDate = this.formatDateForStorage(this.endDate);
+    await this.plugin.saveSettings();
+
+    if (this.quickRangeSelectEl) {
+      this.quickRangeSelectEl.value = "custom";
+      this.plugin.settings.lastQuickRangePreset = "custom";
+      await this.plugin.saveSettings();
+    }
+
+    this.zoomLevel = ZOOM_CONFIG.DEFAULT;
+    await this.renderTimeline();
+    this.updateZoomSlider();
+  }
+
+  private applyQuickRangePreset(preset: QuickRangePreset): void {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    switch (preset) {
+      case "last7days":
+        this.endDate = new Date(now);
+        this.startDate = new Date(now);
+        this.startDate.setDate(this.startDate.getDate() - 6);
+        break;
+      case "last30days":
+        this.endDate = new Date(now);
+        this.startDate = new Date(now);
+        this.startDate.setDate(this.startDate.getDate() - 29);
+        break;
+      case "thisweek":
+        const dayOfWeek = now.getDay();
+        this.startDate = new Date(now);
+        this.startDate.setDate(this.startDate.getDate() - dayOfWeek);
+        this.endDate = new Date(this.startDate);
+        this.endDate.setDate(this.endDate.getDate() + 6);
+        break;
+      case "thismonth":
+        this.startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        this.endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        break;
+      case "last3months":
+        this.endDate = new Date(now);
+        this.startDate = new Date(now);
+        this.startDate.setMonth(this.startDate.getMonth() - 3);
+        break;
+    }
+
+    if (this.startDateInputEl && this.endDateInputEl) {
+      this.startDateInputEl.value = this.formatDateForInput(this.startDate);
+      this.endDateInputEl.value = this.formatDateForInput(this.endDate);
+    }
+
+    this.plugin.settings.customStartDate = this.formatDateForStorage(this.startDate);
+    this.plugin.settings.customEndDate = this.formatDateForStorage(this.endDate);
+    this.plugin.saveSettings();
+
+    this.zoomLevel = ZOOM_CONFIG.DEFAULT;
+    this.renderTimeline();
+    this.updateZoomSlider();
+  }
+
+  private updateControlsVisibility(): void {
+    if (this.monthSelectEl && this.monthSelectEl.parentElement) {
+      if (this.viewMode === "month") {
+        this.monthSelectEl.parentElement.style.display = "";
+      } else {
+        this.monthSelectEl.parentElement.style.display = "none";
+      }
+    }
+
+    if (this.customRangeContainerEl) {
+      if (this.viewMode === "custom") {
+        this.customRangeContainerEl.style.display = "";
+      } else {
+        this.customRangeContainerEl.style.display = "none";
+      }
+    }
+  }
+
+  private async navigatePrevious(): Promise<void> {
+    if (this.viewMode === "month") {
       this.startDate = new Date(
         this.startDate.getFullYear(),
         this.startDate.getMonth() - 1,
@@ -103,17 +368,35 @@ export class TimelineView extends ItemView {
         this.endDate.getMonth(),
         0
       );
-      this.zoomLevel = ZOOM_CONFIG.DEFAULT;
-      await this.updateMonthSelect(monthSelect);
-      await this.renderTimeline();
-      this.updateZoomSlider();
-    });
+      if (this.monthSelectEl) {
+        await this.updateMonthSelect(this.monthSelectEl);
+      }
+    } else {
+      const rangeDuration = this.getRangeDurationInDays();
+      this.startDate.setDate(this.startDate.getDate() - rangeDuration);
+      this.endDate.setDate(this.endDate.getDate() - rangeDuration);
 
-    const nextButton = leftGroup.createEl("button", {
-      text: "Next →",
-      cls: "mod-cta",
-    });
-    nextButton.addEventListener("click", async () => {
+      if (this.startDateInputEl && this.endDateInputEl) {
+        this.startDateInputEl.value = this.formatDateForInput(this.startDate);
+        this.endDateInputEl.value = this.formatDateForInput(this.endDate);
+      }
+
+      this.plugin.settings.customStartDate = this.formatDateForStorage(this.startDate);
+      this.plugin.settings.customEndDate = this.formatDateForStorage(this.endDate);
+      await this.plugin.saveSettings();
+
+      if (this.quickRangeSelectEl) {
+        this.quickRangeSelectEl.value = "custom";
+      }
+    }
+
+    this.zoomLevel = ZOOM_CONFIG.DEFAULT;
+    await this.renderTimeline();
+    this.updateZoomSlider();
+  }
+
+  private async navigateNext(): Promise<void> {
+    if (this.viewMode === "month") {
       this.startDate = new Date(
         this.startDate.getFullYear(),
         this.startDate.getMonth() + 1,
@@ -124,27 +407,56 @@ export class TimelineView extends ItemView {
         this.endDate.getMonth() + 2,
         0
       );
-      this.zoomLevel = ZOOM_CONFIG.DEFAULT;
-      await this.updateMonthSelect(monthSelect);
-      await this.renderTimeline();
-      this.updateZoomSlider();
-    });
+      if (this.monthSelectEl) {
+        await this.updateMonthSelect(this.monthSelectEl);
+      }
+    } else {
+      const rangeDuration = this.getRangeDurationInDays();
+      this.startDate.setDate(this.startDate.getDate() + rangeDuration);
+      this.endDate.setDate(this.endDate.getDate() + rangeDuration);
 
-    const todayButton = leftGroup.createEl("button", {
-      text: "Today",
-      cls: "mod-cta",
-    });
-    todayButton.addEventListener("click", async () => {
-      const now = new Date();
-      this.startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-      this.endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      this.zoomLevel = ZOOM_CONFIG.DEFAULT;
-      await this.updateMonthSelect(monthSelect);
-      await this.renderTimeline();
-      this.updateZoomSlider();
-    });
+      if (this.startDateInputEl && this.endDateInputEl) {
+        this.startDateInputEl.value = this.formatDateForInput(this.startDate);
+        this.endDateInputEl.value = this.formatDateForInput(this.endDate);
+      }
 
-    this.renderZoomControls(centerGroup);
+      this.plugin.settings.customStartDate = this.formatDateForStorage(this.startDate);
+      this.plugin.settings.customEndDate = this.formatDateForStorage(this.endDate);
+      await this.plugin.saveSettings();
+
+      if (this.quickRangeSelectEl) {
+        this.quickRangeSelectEl.value = "custom";
+      }
+    }
+
+    this.zoomLevel = ZOOM_CONFIG.DEFAULT;
+    await this.renderTimeline();
+    this.updateZoomSlider();
+  }
+
+  private async navigateToToday(): Promise<void> {
+    this.viewMode = "month";
+    this.plugin.settings.viewMode = "month";
+    await this.plugin.saveSettings();
+
+    const now = new Date();
+    this.startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    this.endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    this.updateControlsVisibility();
+
+    if (this.monthSelectEl) {
+      await this.updateMonthSelect(this.monthSelectEl);
+    }
+
+    const modeSelect = this.contentEl.querySelector(".timeline-mode-select") as HTMLSelectElement;
+    if (modeSelect) {
+      modeSelect.value = "month";
+    }
+
+    this.zoomLevel = ZOOM_CONFIG.DEFAULT;
+    await this.renderTimeline();
+    this.updateZoomSlider();
   }
 
   private renderZoomControls(container: HTMLElement): void {
