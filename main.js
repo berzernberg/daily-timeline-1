@@ -446,7 +446,8 @@ var TimelineView = class extends import_obsidian.ItemView {
   }
   async renderGroupedTaskInSegment(segment, groupedTask) {
     const taskDotContainer = segment.createDiv({ cls: "timeline-task-dot-container timeline-task-grouped" });
-    taskDotContainer.style.left = `${groupedTask.position}%`;
+    const clampedPosition = Math.min(groupedTask.position, 98.5);
+    taskDotContainer.style.left = `${clampedPosition}%`;
     const taskDot = taskDotContainer.createDiv({ cls: "timeline-task-dot" });
     taskDot.setAttribute("data-status", "grouped");
     const countBadge = taskDot.createDiv({ cls: "timeline-task-count-badge" });
@@ -529,7 +530,8 @@ var TimelineView = class extends import_obsidian.ItemView {
   }
   async renderTaskInSegment(segment, task) {
     const totalMinutes = task.hour * 60 + task.minute;
-    const percentage = totalMinutes / (24 * 60) * 100;
+    let percentage = totalMinutes / (24 * 60) * 100;
+    percentage = Math.min(percentage, 98.5);
     const taskDotContainer = segment.createDiv({ cls: "timeline-task-dot-container" });
     taskDotContainer.style.left = `${percentage}%`;
     const taskDot = taskDotContainer.createDiv({ cls: "timeline-task-dot" });
