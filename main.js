@@ -555,11 +555,9 @@ var TimelineSettingTab = class extends import_obsidian2.PluginSettingTab {
       });
       const deleteButton = actionsDiv.createEl("button", { text: "Delete", cls: "mod-warning" });
       deleteButton.addEventListener("click", async () => {
-        if (confirm(`Delete style for tag "${preset.tag}"?`)) {
-          this.plugin.settings.tagStyles.splice(index, 1);
-          await this.plugin.saveSettings();
-          this.display();
-        }
+        this.plugin.settings.tagStyles.splice(index, 1);
+        await this.plugin.saveSettings();
+        this.display();
       });
     });
   }
