@@ -117,7 +117,7 @@ Embedded timelines include interactive controls:
 
 Show the current month:
 ````markdown
-```timeline
+```daily-timeline
 mode: month
 startDate: 2025-10-01
 ```
@@ -125,7 +125,7 @@ startDate: 2025-10-01
 
 Show this week:
 ````markdown
-```timeline
+```daily-timeline
 mode: custom
 show: this-week
 ```
@@ -133,7 +133,7 @@ show: this-week
 
 Show a specific date range:
 ````markdown
-```timeline
+```daily-timeline
 mode: custom
 startDate: 01.10.2025
 endDate: 15.10.2025
@@ -142,7 +142,7 @@ endDate: 15.10.2025
 
 Show the last 30 days:
 ````markdown
-```timeline
+```daily-timeline
 mode: custom
 show: last-30
 ```
