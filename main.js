@@ -1772,12 +1772,12 @@ var EmbeddedTimeline = class {
   }
   renderZoomControls(container) {
     const zoomContainer = container.createDiv({ cls: "embedded-timeline-zoom-controls" });
-    const zoomOutButton = zoomContainer.createEl("button", {
-      cls: "embedded-timeline-zoom-btn",
+    const zoomOutIcon = zoomContainer.createDiv({
+      cls: "embedded-timeline-zoom-icon",
       attr: { "aria-label": "Zoom out" }
     });
-    zoomOutButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path><line x1="8" y1="11" x2="14" y2="11"></line></svg>';
-    zoomOutButton.addEventListener("click", () => {
+    zoomOutIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path><line x1="8" y1="11" x2="14" y2="11"></line></svg>';
+    zoomOutIcon.addEventListener("click", () => {
       const newZoom = Math.max(ZOOM_CONFIG2.MIN, this.zoomLevel - ZOOM_CONFIG2.STEP);
       this.applyZoom(newZoom);
     });
@@ -1791,12 +1791,12 @@ var EmbeddedTimeline = class {
     zoomSlider.step = String(ZOOM_CONFIG2.STEP * 100);
     const zoomLabel = zoomContainer.createDiv({ cls: "embedded-timeline-zoom-label" });
     zoomLabel.setText(`${Math.round(this.zoomLevel * 100)}%`);
-    const zoomInButton = zoomContainer.createEl("button", {
-      cls: "embedded-timeline-zoom-btn",
+    const zoomInIcon = zoomContainer.createDiv({
+      cls: "embedded-timeline-zoom-icon",
       attr: { "aria-label": "Zoom in" }
     });
-    zoomInButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>';
-    zoomInButton.addEventListener("click", () => {
+    zoomInIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>';
+    zoomInIcon.addEventListener("click", () => {
       const newZoom = Math.min(ZOOM_CONFIG2.MAX, this.zoomLevel + ZOOM_CONFIG2.STEP);
       this.applyZoom(newZoom);
     });

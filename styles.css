@@ -771,30 +771,26 @@
   border: 1px solid var(--background-modifier-border);
 }
 
-.embedded-timeline-zoom-btn {
+.embedded-timeline-zoom-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  background: var(--background-secondary);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 3px;
   cursor: pointer;
+  color: var(--text-normal);
   flex-shrink: 0;
   transition: all 0.2s ease;
+  opacity: 0.8;
 }
 
-.embedded-timeline-zoom-btn:hover {
-  background: var(--background-modifier-hover);
-  border-color: var(--interactive-accent);
+.embedded-timeline-zoom-icon:hover {
+  opacity: 1;
+  color: var(--interactive-accent);
 }
 
-.embedded-timeline-zoom-btn svg {
-  width: 14px;
-  height: 14px;
-  stroke: var(--text-normal);
+.embedded-timeline-zoom-icon svg {
+  width: 18px;
+  height: 18px;
+  display: block;
 }
 
 .embedded-timeline-zoom-slider {
