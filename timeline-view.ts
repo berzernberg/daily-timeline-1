@@ -411,14 +411,139 @@ export class TimelineView extends ItemView {
     const endLabel = segment.createDiv({ cls: "timeline-segment-time timeline-segment-time-end" });
     endLabel.setText("23:59");
 
-    for (const task of note.tasks) {
-      await this.renderTaskInSegment(segment, task);
+    const groupedTasks = this.groupOverlappingTasks(note.tasks);
+    for (const group of groupedTasks) {
+      await this.renderTaskGroup(segment, group);
     }
+  }
+
+  private groupOverlappingTasks(tasks: TaskItem[]): TaskItem[][] {
+    if (tasks.length === 0) return [];
+
+    const sortedTasks = [...tasks].sort((a, b) => {
+      const aMinutes = a.hour * 60 + a.minute;
+      const bMinutes = b.hour * 60 + b.minute;
+      return aMinutes - bMinutes;
+    });
+
+    const groups: TaskItem[][] = [];
+    const OVERLAP_THRESHOLD = 1.5;
+
+    for (const task of sortedTasks) {
+      const taskPercentage = ((task.hour * 60 + task.minute) / (24 * 60)) * 100;
+
+      let addedToGroup = false;
+      for (const group of groups) {
+        const groupPercentage = ((group[0].hour * 60 + group[0].minute) / (24 * 60)) * 100;
+
+        if (Math.abs(taskPercentage - groupPercentage) < OVERLAP_THRESHOLD) {
+          group.push(task);
+          addedToGroup = true;
+          break;
+        }
+      }
+
+      if (!addedToGroup) {
+        groups.push([task]);
+      }
+    }
+
+    return groups;
   }
 
   private getTagStyle(tag: string | undefined) {
     if (!tag) return null;
     return this.plugin.settings.tagStyles.find(style => style.tag === tag);
+  }
+
+  private async renderTaskGroup(segment: HTMLElement, group: TaskItem[]): Promise<void> {
+    const firstTask = group[0];
+    const totalMinutes = firstTask.hour * 60 + firstTask.minute;
+    const percentage = (totalMinutes / (24 * 60)) * 100;
+
+    const taskDotContainer = segment.createDiv({ cls: "timeline-task-dot-container" });
+    taskDotContainer.style.left = `${percentage}%`;
+
+    const taskDot = taskDotContainer.createDiv({ cls: "timeline-task-dot" });
+    taskDot.setAttribute("data-status", firstTask.status);
+
+    const tagStyle = this.getTagStyle(firstTask.firstTag);
+    if (tagStyle && tagStyle.color) {
+      taskDot.addClass("timeline-task-dot-custom");
+      taskDot.style.setProperty("background-color", tagStyle.color, "important");
+    }
+
+    if (group.length > 1) {
+      const badge = taskDot.createDiv({ cls: "timeline-task-badge" });
+      badge.setText(group.length.toString());
+    } else {
+      const taskLabel = taskDot.createDiv({ cls: "timeline-task-label" });
+      taskLabel.setText(firstTask.time);
+    }
+
+    if (tagStyle && tagStyle.emoji) {
+      const emojiEl = taskDotContainer.createDiv({ cls: "timeline-task-emoji" });
+      emojiEl.setText(tagStyle.emoji);
+    }
+
+    const tooltips: HTMLElement[] = [];
+
+    for (const task of group) {
+      const tooltip = document.body.createDiv({ cls: "timeline-tooltip" });
+      this.tooltips.push(tooltip);
+      tooltips.push(tooltip);
+      const tooltipContent = tooltip.createDiv({ cls: "timeline-tooltip-content" });
+
+      const taskText = tooltipContent.createDiv({ cls: "timeline-tooltip-task" });
+      taskText.textContent = `[${task.status}] `;
+
+      await this.renderTaskContent(taskText, task.content);
+
+      if (task.subItems.length > 0) {
+        const subList = tooltipContent.createEl("ul", { cls: "timeline-tooltip-subitems" });
+        for (const subItem of task.subItems) {
+          const listItem = subList.createEl("li");
+          await this.renderTaskContent(listItem, subItem);
+        }
+      }
+    }
+
+    taskDotContainer.addEventListener("mouseenter", () => {
+      const rect = taskDotContainer.getBoundingClientRect();
+      let offsetTop = rect.bottom + 12;
+
+      for (const tooltip of tooltips) {
+        tooltip.style.top = `${offsetTop}px`;
+        tooltip.style.left = `${rect.left + rect.width / 2}px`;
+        tooltip.style.transform = "translateX(-50%)";
+        tooltip.addClass("is-visible");
+
+        offsetTop += tooltip.offsetHeight + 8;
+      }
+
+      taskDotContainer.style.zIndex = "100";
+    });
+
+    taskDotContainer.addEventListener("mouseleave", () => {
+      for (const tooltip of tooltips) {
+        tooltip.removeClass("is-visible");
+      }
+      taskDotContainer.style.zIndex = "2";
+    });
+
+    for (const tooltip of tooltips) {
+      tooltip.addEventListener("mouseenter", () => {
+        for (const t of tooltips) {
+          t.addClass("is-visible");
+        }
+      });
+
+      tooltip.addEventListener("mouseleave", () => {
+        for (const t of tooltips) {
+          t.removeClass("is-visible");
+        }
+      });
+    }
   }
 
   private async renderTaskInSegment(segment: HTMLElement, task: TaskItem): Promise<void> {
