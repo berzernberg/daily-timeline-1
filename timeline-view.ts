@@ -416,16 +416,33 @@ export class TimelineView extends ItemView {
     }
   }
 
+  private getTagStyle(tag: string | undefined) {
+    if (!tag) return null;
+    return this.plugin.settings.tagStyles.find(style => style.tag === tag.toLowerCase());
+  }
+
   private async renderTaskInSegment(segment: HTMLElement, task: TaskItem): Promise<void> {
     const totalMinutes = task.hour * 60 + task.minute;
     const percentage = (totalMinutes / (24 * 60)) * 100;
 
-    const taskDot = segment.createDiv({ cls: "timeline-task-dot" });
-    taskDot.style.left = `${percentage}%`;
+    const taskDotContainer = segment.createDiv({ cls: "timeline-task-dot-container" });
+    taskDotContainer.style.left = `${percentage}%`;
+
+    const taskDot = taskDotContainer.createDiv({ cls: "timeline-task-dot" });
     taskDot.setAttribute("data-status", task.status);
+
+    const tagStyle = this.getTagStyle(task.firstTag);
+    if (tagStyle && tagStyle.color) {
+      taskDot.style.backgroundColor = tagStyle.color;
+    }
 
     const taskLabel = taskDot.createDiv({ cls: "timeline-task-label" });
     taskLabel.setText(task.time);
+
+    if (tagStyle && tagStyle.emoji) {
+      const emojiEl = taskDotContainer.createDiv({ cls: "timeline-task-emoji" });
+      emojiEl.setText(tagStyle.emoji);
+    }
 
     const tooltip = document.body.createDiv({ cls: "timeline-tooltip" });
     this.tooltips.push(tooltip);
@@ -444,15 +461,15 @@ export class TimelineView extends ItemView {
       }
     }
 
-    taskDot.addEventListener("mouseenter", () => {
-      const rect = taskDot.getBoundingClientRect();
+    taskDotContainer.addEventListener("mouseenter", () => {
+      const rect = taskDotContainer.getBoundingClientRect();
       tooltip.style.top = `${rect.bottom + 12}px`;
       tooltip.style.left = `${rect.left + rect.width / 2}px`;
       tooltip.style.transform = "translateX(-50%)";
       tooltip.addClass("is-visible");
     });
 
-    taskDot.addEventListener("mouseleave", () => {
+    taskDotContainer.addEventListener("mouseleave", () => {
       tooltip.removeClass("is-visible");
     });
 

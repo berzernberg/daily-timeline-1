@@ -115,6 +115,12 @@ export class DailyNotesParser {
     }
   }
 
+  private extractFirstTag(content: string): string | undefined {
+    const tagRegex = /#([a-zA-Z0-9_-]+)/;
+    const match = content.match(tagRegex);
+    return match ? match[1].toLowerCase() : undefined;
+  }
+
   private async extractTasks(file: TFile): Promise<TaskItem[]> {
     const content = await this.vault.cachedRead(file);
     const lines = content.split("\n");
@@ -134,6 +140,7 @@ export class DailyNotesParser {
 
         const [, status, time, content] = match;
         const [hour, minute] = time.split(":").map(Number);
+        const firstTag = this.extractFirstTag(content);
 
         currentTask = {
           status: status,
@@ -143,6 +150,7 @@ export class DailyNotesParser {
           date: this.extractDateFromFilename(file.name, "YYYY-MM-DD") || "",
           hour: hour,
           minute: minute,
+          firstTag: firstTag,
         };
       } else if (currentTask && line.trim().startsWith("-") && line.includes("\t")) {
         currentTask.subItems.push(line.trim().substring(1).trim());
