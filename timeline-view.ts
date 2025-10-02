@@ -433,7 +433,8 @@ export class TimelineView extends ItemView {
 
     const tagStyle = this.getTagStyle(task.firstTag);
     if (tagStyle && tagStyle.color) {
-      taskDot.style.backgroundColor = tagStyle.color;
+      taskDot.addClass("timeline-task-dot-custom");
+      taskDot.style.setProperty("background-color", tagStyle.color, "important");
     }
 
     const taskLabel = taskDot.createDiv({ cls: "timeline-task-label" });

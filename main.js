@@ -388,7 +388,8 @@ var TimelineView = class extends import_obsidian.ItemView {
     taskDot.setAttribute("data-status", task.status);
     const tagStyle = this.getTagStyle(task.firstTag);
     if (tagStyle && tagStyle.color) {
-      taskDot.style.backgroundColor = tagStyle.color;
+      taskDot.addClass("timeline-task-dot-custom");
+      taskDot.style.setProperty("background-color", tagStyle.color, "important");
     }
     const taskLabel = taskDot.createDiv({ cls: "timeline-task-label" });
     taskLabel.setText(task.time);
@@ -735,7 +736,7 @@ var DailyNotesParser = class {
     }
   }
   extractFirstTag(content) {
-    const tagRegex = /#([a-zA-Z0-9_/-]+)/;
+    const tagRegex = /#([\p{L}\p{N}_/-]+)/u;
     const match = content.match(tagRegex);
     return match ? match[1].toLowerCase() : void 0;
   }
