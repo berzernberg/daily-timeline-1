@@ -20,6 +20,9 @@ export class TimelineView extends ItemView {
   private tooltips: HTMLElement[] = [];
   private zoomLevel: number = ZOOM_CONFIG.DEFAULT;
   private timelineScrollEl: HTMLElement | null = null;
+  private isDragging: boolean = false;
+  private dragStartX: number = 0;
+  private dragStartScrollLeft: number = 0;
 
   constructor(leaf: WorkspaceLeaf, plugin: DailyNotesTimelinePlugin) {
     super(leaf);
@@ -202,7 +205,7 @@ export class TimelineView extends ItemView {
     }
   }
 
-  private applyZoom(newZoomLevel: number): void {
+  private applyZoom(newZoomLevel: number, anchorX?: number): void {
     if (!this.timelineScrollEl) return;
 
     const scrollContainer = this.timelineScrollEl;
@@ -210,7 +213,12 @@ export class TimelineView extends ItemView {
     const containerWidth = scrollContainer.clientWidth;
     const scrollWidth = scrollContainer.scrollWidth;
 
-    const centerPosition = (scrollLeft + containerWidth / 2) / scrollWidth;
+    let anchorPosition: number;
+    if (anchorX !== undefined) {
+      anchorPosition = (scrollLeft + anchorX) / scrollWidth;
+    } else {
+      anchorPosition = (scrollLeft + containerWidth / 2) / scrollWidth;
+    }
 
     this.zoomLevel = newZoomLevel;
     this.updateZoomSlider();
@@ -219,10 +227,67 @@ export class TimelineView extends ItemView {
       if (!this.timelineScrollEl) return;
 
       const newScrollWidth = this.timelineScrollEl.scrollWidth;
-      const newCenterPosition = centerPosition * newScrollWidth;
-      const newScrollLeft = newCenterPosition - containerWidth / 2;
+      const newAnchorPosition = anchorPosition * newScrollWidth;
+      const newScrollLeft = anchorX !== undefined
+        ? newAnchorPosition - anchorX
+        : newAnchorPosition - containerWidth / 2;
 
       this.timelineScrollEl.scrollLeft = Math.max(0, newScrollLeft);
+    });
+  }
+
+  private setupTimelineInteractions(timelineScroll: HTMLElement): void {
+    timelineScroll.addEventListener("wheel", (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const rect = timelineScroll.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const delta = -e.deltaY;
+        const zoomFactor = delta > 0 ? ZOOM_CONFIG.STEP : -ZOOM_CONFIG.STEP;
+        const newZoom = Math.max(
+          ZOOM_CONFIG.MIN,
+          Math.min(ZOOM_CONFIG.MAX, this.zoomLevel + zoomFactor)
+        );
+        this.applyZoom(newZoom, mouseX);
+      } else {
+        e.preventDefault();
+        timelineScroll.scrollLeft += e.deltaY;
+      }
+    });
+
+    timelineScroll.addEventListener("mousedown", (e: MouseEvent) => {
+      if (e.button !== 0) return;
+      this.isDragging = true;
+      this.dragStartX = e.clientX;
+      this.dragStartScrollLeft = timelineScroll.scrollLeft;
+      timelineScroll.style.cursor = "grabbing";
+      timelineScroll.style.userSelect = "none";
+    });
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!this.isDragging) return;
+      e.preventDefault();
+      const deltaX = e.clientX - this.dragStartX;
+      timelineScroll.scrollLeft = this.dragStartScrollLeft - deltaX;
+    };
+
+    const handleMouseUp = () => {
+      if (this.isDragging) {
+        this.isDragging = false;
+        timelineScroll.style.cursor = "grab";
+        timelineScroll.style.userSelect = "";
+      }
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+
+    timelineScroll.addEventListener("mouseleave", () => {
+      if (this.isDragging) {
+        this.isDragging = false;
+        timelineScroll.style.cursor = "grab";
+        timelineScroll.style.userSelect = "";
+      }
     });
   }
 
@@ -271,6 +336,7 @@ export class TimelineView extends ItemView {
       cls: "timeline-scroll",
     });
     this.timelineScrollEl = timelineScroll;
+    this.setupTimelineInteractions(timelineScroll);
 
     const dailyNotes = await this.plugin.parser.parseDailyNotes(
       this.plugin.settings.dailyNotesFolder,

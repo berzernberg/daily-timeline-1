@@ -51,6 +51,9 @@ var TimelineView = class extends import_obsidian.ItemView {
     __publicField(this, "tooltips", []);
     __publicField(this, "zoomLevel", ZOOM_CONFIG.DEFAULT);
     __publicField(this, "timelineScrollEl", null);
+    __publicField(this, "isDragging", false);
+    __publicField(this, "dragStartX", 0);
+    __publicField(this, "dragStartScrollLeft", 0);
     __publicField(this, "zoomSlider", null);
     __publicField(this, "zoomLabel", null);
     this.plugin = plugin;
@@ -205,21 +208,75 @@ var TimelineView = class extends import_obsidian.ItemView {
       this.zoomLabel.setText(`${Math.round(this.zoomLevel * 100)}%`);
     }
   }
-  applyZoom(newZoomLevel) {
+  applyZoom(newZoomLevel, anchorX) {
     if (!this.timelineScrollEl) return;
     const scrollContainer = this.timelineScrollEl;
     const scrollLeft = scrollContainer.scrollLeft;
     const containerWidth = scrollContainer.clientWidth;
     const scrollWidth = scrollContainer.scrollWidth;
-    const centerPosition = (scrollLeft + containerWidth / 2) / scrollWidth;
+    let anchorPosition;
+    if (anchorX !== void 0) {
+      anchorPosition = (scrollLeft + anchorX) / scrollWidth;
+    } else {
+      anchorPosition = (scrollLeft + containerWidth / 2) / scrollWidth;
+    }
     this.zoomLevel = newZoomLevel;
     this.updateZoomSlider();
     this.renderTimeline().then(() => {
       if (!this.timelineScrollEl) return;
       const newScrollWidth = this.timelineScrollEl.scrollWidth;
-      const newCenterPosition = centerPosition * newScrollWidth;
-      const newScrollLeft = newCenterPosition - containerWidth / 2;
+      const newAnchorPosition = anchorPosition * newScrollWidth;
+      const newScrollLeft = anchorX !== void 0 ? newAnchorPosition - anchorX : newAnchorPosition - containerWidth / 2;
       this.timelineScrollEl.scrollLeft = Math.max(0, newScrollLeft);
+    });
+  }
+  setupTimelineInteractions(timelineScroll) {
+    timelineScroll.addEventListener("wheel", (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const rect = timelineScroll.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const delta = -e.deltaY;
+        const zoomFactor = delta > 0 ? ZOOM_CONFIG.STEP : -ZOOM_CONFIG.STEP;
+        const newZoom = Math.max(
+          ZOOM_CONFIG.MIN,
+          Math.min(ZOOM_CONFIG.MAX, this.zoomLevel + zoomFactor)
+        );
+        this.applyZoom(newZoom, mouseX);
+      } else {
+        e.preventDefault();
+        timelineScroll.scrollLeft += e.deltaY;
+      }
+    });
+    timelineScroll.addEventListener("mousedown", (e) => {
+      if (e.button !== 0) return;
+      this.isDragging = true;
+      this.dragStartX = e.clientX;
+      this.dragStartScrollLeft = timelineScroll.scrollLeft;
+      timelineScroll.style.cursor = "grabbing";
+      timelineScroll.style.userSelect = "none";
+    });
+    const handleMouseMove = (e) => {
+      if (!this.isDragging) return;
+      e.preventDefault();
+      const deltaX = e.clientX - this.dragStartX;
+      timelineScroll.scrollLeft = this.dragStartScrollLeft - deltaX;
+    };
+    const handleMouseUp = () => {
+      if (this.isDragging) {
+        this.isDragging = false;
+        timelineScroll.style.cursor = "grab";
+        timelineScroll.style.userSelect = "";
+      }
+    };
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    timelineScroll.addEventListener("mouseleave", () => {
+      if (this.isDragging) {
+        this.isDragging = false;
+        timelineScroll.style.cursor = "grab";
+        timelineScroll.style.userSelect = "";
+      }
     });
   }
   async populateMonthSelect(select) {
@@ -255,6 +312,7 @@ var TimelineView = class extends import_obsidian.ItemView {
       cls: "timeline-scroll"
     });
     this.timelineScrollEl = timelineScroll;
+    this.setupTimelineInteractions(timelineScroll);
     const dailyNotes = await this.plugin.parser.parseDailyNotes(
       this.plugin.settings.dailyNotesFolder,
       this.plugin.settings.dateFormat,
