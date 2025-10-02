@@ -147,7 +147,6 @@
   top: 0;
   bottom: 0;
   border-right: 2px solid var(--background-modifier-border);
-  min-width: 180px;
   overflow: visible;
 }
 
