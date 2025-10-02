@@ -178,6 +178,17 @@
   z-index: 2;
 }
 
+.timeline-segment-date-clickable {
+  cursor: pointer;
+  color: var(--text-accent);
+  transition: color 0.2s ease;
+}
+
+.timeline-segment-date-clickable:hover {
+  color: var(--text-accent-hover);
+  text-decoration: underline;
+}
+
 .timeline-segment-weekday {
   position: absolute;
   top: 26px;
@@ -441,6 +452,17 @@
 
 .timeline-tooltip-link:hover {
   color: var(--link-color-hover);
+  text-decoration: underline;
+}
+
+.timeline-tooltip-tag {
+  text-decoration: none;
+  color: var(--text-accent);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.timeline-tooltip-tag:hover {
   text-decoration: underline;
 }
 

@@ -411,6 +411,16 @@ var TimelineView = class extends import_obsidian.ItemView {
         day: "numeric"
       })
     );
+    if (note.path) {
+      dateLabel.addClass("timeline-segment-date-clickable");
+      dateLabel.addEventListener("click", async (e) => {
+        e.preventDefault();
+        const file = this.app.vault.getAbstractFileByPath(note.path);
+        if (file) {
+          await this.app.workspace.getLeaf(false).openFile(file);
+        }
+      });
+    }
     const weekdayLabel = segment.createDiv({ cls: "timeline-segment-weekday" });
     weekdayLabel.setText(
       dateObj.toLocaleDateString("en-US", {
@@ -611,18 +621,44 @@ var TimelineView = class extends import_obsidian.ItemView {
     }
   }
   async renderTextWithLinks(container, text) {
-    const textSpan = container.createSpan();
-    textSpan.textContent = text;
+    const tagRegex = /#([\p{L}\p{N}_\/-]+)/gu;
+    let lastIndex = 0;
+    let match;
+    while ((match = tagRegex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        const textSpan = container.createSpan();
+        textSpan.textContent = text.substring(lastIndex, match.index);
+      }
+      const tagText = match[1];
+      const tagLink = container.createEl("a", {
+        cls: "tag timeline-tooltip-tag",
+        href: "#"
+      });
+      tagLink.textContent = `#${tagText}`;
+      tagLink.addEventListener("click", async (e) => {
+        var _a;
+        e.preventDefault();
+        (_a = this.app.internalPlugins.getPluginById("global-search")) == null ? void 0 : _a.instance.openGlobalSearch(`tag:#${tagText}`);
+      });
+      lastIndex = match.index + match[0].length;
+    }
+    if (lastIndex < text.length) {
+      const textSpan = container.createSpan();
+      textSpan.textContent = text.substring(lastIndex);
+    }
   }
   renderLink(container, linkText) {
+    const pipeSplit = linkText.split("|");
+    const actualLink = pipeSplit[0].trim();
+    const displayText = pipeSplit.length > 1 ? pipeSplit[1].trim() : actualLink;
     const link = container.createEl("a", {
       cls: "internal-link timeline-tooltip-link",
       href: "#"
     });
-    link.textContent = linkText;
+    link.textContent = displayText;
     link.addEventListener("click", async (e) => {
       e.preventDefault();
-      const file = this.plugin.app.metadataCache.getFirstLinkpathDest(linkText, "");
+      const file = this.plugin.app.metadataCache.getFirstLinkpathDest(actualLink, "");
       if (file) {
         await this.plugin.app.workspace.getLeaf(false).openFile(file);
       }
