@@ -1,6 +1,6 @@
 import { ItemView, WorkspaceLeaf } from "obsidian";
 import DailyNotesTimelinePlugin from "./main";
-import { DailyNote, TaskItem } from "./types";
+import { DailyNote, TaskItem, GroupedTask } from "./types";
 
 export const VIEW_TYPE_TIMELINE = "daily-notes-timeline";
 
@@ -380,6 +380,65 @@ export class TimelineView extends ItemView {
     }
   }
 
+  private groupOverlappingTasks(tasks: TaskItem[], segmentWidth: number): (TaskItem | GroupedTask)[] {
+    if (tasks.length === 0) return [];
+
+    const sortedTasks = [...tasks].sort((a, b) => {
+      const aMinutes = a.hour * 60 + a.minute;
+      const bMinutes = b.hour * 60 + b.minute;
+      return aMinutes - bMinutes;
+    });
+
+    const OVERLAP_THRESHOLD_PIXELS = 20;
+    const groups: (TaskItem | GroupedTask)[] = [];
+    let currentGroup: TaskItem[] = [sortedTasks[0]];
+
+    for (let i = 1; i < sortedTasks.length; i++) {
+      const prevTask = sortedTasks[i - 1];
+      const currTask = sortedTasks[i];
+
+      const prevPercentage = ((prevTask.hour * 60 + prevTask.minute) / (24 * 60)) * 100;
+      const currPercentage = ((currTask.hour * 60 + currTask.minute) / (24 * 60)) * 100;
+
+      const pixelDiff = Math.abs(currPercentage - prevPercentage) * (segmentWidth / 100);
+
+      if (pixelDiff < OVERLAP_THRESHOLD_PIXELS) {
+        currentGroup.push(currTask);
+      } else {
+        if (currentGroup.length > 1) {
+          const avgMinutes = currentGroup.reduce((sum, t) => sum + (t.hour * 60 + t.minute), 0) / currentGroup.length;
+          const avgPercentage = (avgMinutes / (24 * 60)) * 100;
+          const avgHour = Math.floor(avgMinutes / 60);
+          const avgMinute = Math.floor(avgMinutes % 60);
+          groups.push({
+            tasks: currentGroup,
+            position: avgPercentage,
+            averageTime: `${String(avgHour).padStart(2, '0')}:${String(avgMinute).padStart(2, '0')}`
+          });
+        } else {
+          groups.push(currentGroup[0]);
+        }
+        currentGroup = [currTask];
+      }
+    }
+
+    if (currentGroup.length > 1) {
+      const avgMinutes = currentGroup.reduce((sum, t) => sum + (t.hour * 60 + t.minute), 0) / currentGroup.length;
+      const avgPercentage = (avgMinutes / (24 * 60)) * 100;
+      const avgHour = Math.floor(avgMinutes / 60);
+      const avgMinute = Math.floor(avgMinutes % 60);
+      groups.push({
+        tasks: currentGroup,
+        position: avgPercentage,
+        averageTime: `${String(avgHour).padStart(2, '0')}:${String(avgMinute).padStart(2, '0')}`
+      });
+    } else {
+      groups.push(currentGroup[0]);
+    }
+
+    return groups;
+  }
+
   private async renderDaySegment(track: HTMLElement, note: DailyNote, index: number, total: number, segmentWidth: number): Promise<void> {
     const segment = track.createDiv({ cls: "timeline-segment" });
     segment.style.width = `${segmentWidth}px`;
@@ -411,14 +470,92 @@ export class TimelineView extends ItemView {
     const endLabel = segment.createDiv({ cls: "timeline-segment-time timeline-segment-time-end" });
     endLabel.setText("23:59");
 
-    for (const task of note.tasks) {
-      await this.renderTaskInSegment(segment, task);
+    const groupedItems = this.groupOverlappingTasks(note.tasks, segmentWidth);
+
+    for (const item of groupedItems) {
+      if ('tasks' in item) {
+        await this.renderGroupedTaskInSegment(segment, item as GroupedTask);
+      } else {
+        await this.renderTaskInSegment(segment, item as TaskItem);
+      }
     }
   }
 
   private getTagStyle(tag: string | undefined) {
     if (!tag) return null;
     return this.plugin.settings.tagStyles.find(style => style.tag === tag);
+  }
+
+  private async renderGroupedTaskInSegment(segment: HTMLElement, groupedTask: GroupedTask): Promise<void> {
+    const taskDotContainer = segment.createDiv({ cls: "timeline-task-dot-container timeline-task-grouped" });
+    taskDotContainer.style.left = `${groupedTask.position}%`;
+
+    const taskDot = taskDotContainer.createDiv({ cls: "timeline-task-dot" });
+    taskDot.setAttribute("data-status", "grouped");
+
+    const countBadge = taskDot.createDiv({ cls: "timeline-task-count-badge" });
+    countBadge.setText(String(groupedTask.tasks.length));
+
+    const emojiContainer = taskDotContainer.createDiv({ cls: "timeline-emoji-stack" });
+    for (const task of groupedTask.tasks) {
+      const tagStyle = this.getTagStyle(task.firstTag);
+      if (tagStyle && tagStyle.emoji) {
+        const emojiEl = emojiContainer.createDiv({ cls: "timeline-task-emoji" });
+        emojiEl.setText(tagStyle.emoji);
+      }
+    }
+
+    const tooltip = document.body.createDiv({ cls: "timeline-tooltip" });
+    this.tooltips.push(tooltip);
+
+    for (let i = 0; i < groupedTask.tasks.length; i++) {
+      const task = groupedTask.tasks[i];
+      const tooltipContent = tooltip.createDiv({ cls: "timeline-tooltip-content" });
+
+      if (i > 0) {
+        tooltipContent.addClass("timeline-tooltip-stacked");
+      }
+
+      const timeHeader = tooltipContent.createDiv({ cls: "timeline-tooltip-time" });
+      timeHeader.setText(task.time);
+
+      const taskText = tooltipContent.createDiv({ cls: "timeline-tooltip-task" });
+      taskText.textContent = `[${task.status}] `;
+
+      await this.renderTaskContent(taskText, task.content);
+
+      if (task.subItems.length > 0) {
+        const subList = tooltipContent.createEl("ul", { cls: "timeline-tooltip-subitems" });
+        for (const subItem of task.subItems) {
+          const listItem = subList.createEl("li");
+          await this.renderTaskContent(listItem, subItem);
+        }
+      }
+    }
+
+    taskDotContainer.addEventListener("mouseenter", () => {
+      const rect = taskDotContainer.getBoundingClientRect();
+      tooltip.style.top = `${rect.bottom + 12}px`;
+      tooltip.style.left = `${rect.left + rect.width / 2}px`;
+      tooltip.style.transform = "translateX(-50%)";
+      tooltip.addClass("is-visible");
+      taskDotContainer.addClass("is-hovered");
+    });
+
+    taskDotContainer.addEventListener("mouseleave", () => {
+      tooltip.removeClass("is-visible");
+      taskDotContainer.removeClass("is-hovered");
+    });
+
+    tooltip.addEventListener("mouseenter", () => {
+      tooltip.addClass("is-visible");
+      taskDotContainer.addClass("is-hovered");
+    });
+
+    tooltip.addEventListener("mouseleave", () => {
+      tooltip.removeClass("is-visible");
+      taskDotContainer.removeClass("is-hovered");
+    });
   }
 
   private async renderTaskInSegment(segment: HTMLElement, task: TaskItem): Promise<void> {
@@ -440,14 +577,18 @@ export class TimelineView extends ItemView {
     const taskLabel = taskDot.createDiv({ cls: "timeline-task-label" });
     taskLabel.setText(task.time);
 
+    const emojiContainer = taskDotContainer.createDiv({ cls: "timeline-emoji-stack" });
     if (tagStyle && tagStyle.emoji) {
-      const emojiEl = taskDotContainer.createDiv({ cls: "timeline-task-emoji" });
+      const emojiEl = emojiContainer.createDiv({ cls: "timeline-task-emoji" });
       emojiEl.setText(tagStyle.emoji);
     }
 
     const tooltip = document.body.createDiv({ cls: "timeline-tooltip" });
     this.tooltips.push(tooltip);
     const tooltipContent = tooltip.createDiv({ cls: "timeline-tooltip-content" });
+
+    const timeHeader = tooltipContent.createDiv({ cls: "timeline-tooltip-time" });
+    timeHeader.setText(task.time);
 
     const taskText = tooltipContent.createDiv({ cls: "timeline-tooltip-task" });
     taskText.textContent = `[${task.status}] `;
@@ -468,18 +609,22 @@ export class TimelineView extends ItemView {
       tooltip.style.left = `${rect.left + rect.width / 2}px`;
       tooltip.style.transform = "translateX(-50%)";
       tooltip.addClass("is-visible");
+      taskDotContainer.addClass("is-hovered");
     });
 
     taskDotContainer.addEventListener("mouseleave", () => {
       tooltip.removeClass("is-visible");
+      taskDotContainer.removeClass("is-hovered");
     });
 
     tooltip.addEventListener("mouseenter", () => {
       tooltip.addClass("is-visible");
+      taskDotContainer.addClass("is-hovered");
     });
 
     tooltip.addEventListener("mouseleave", () => {
       tooltip.removeClass("is-visible");
+      taskDotContainer.removeClass("is-hovered");
     });
   }
 

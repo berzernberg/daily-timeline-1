@@ -211,12 +211,16 @@
 .timeline-task-dot-container {
   position: absolute;
   top: 50%;
-  transform: translateY(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
   z-index: 2;
   cursor: pointer;
+  transition: z-index 0s;
+}
+
+.timeline-task-dot-container.is-hovered {
+  z-index: 100;
 }
 
 .timeline-task-dot {
@@ -227,6 +231,7 @@
   border: 2px solid var(--background-primary);
   transition: all 0.2s ease;
   position: relative;
+  transform: translateY(-50%);
 }
 
 .timeline-task-dot-container:hover .timeline-task-dot {
@@ -252,9 +257,10 @@
 
 .timeline-task-label {
   position: absolute;
-  top: -30px;
+  bottom: 100%;
   left: 50%;
   transform: translateX(-50%);
+  margin-bottom: 4px;
   font-size: 0.75em;
   color: var(--text-muted);
   white-space: nowrap;
@@ -265,11 +271,43 @@
   border: 1px solid var(--background-modifier-border);
 }
 
-.timeline-task-emoji {
-  font-size: 1.2em;
+.timeline-task-count-badge {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 4px;
+  font-size: 0.7em;
+  font-weight: 600;
+  color: var(--text-on-accent);
+  background: var(--interactive-accent);
+  padding: 2px 7px;
+  border-radius: 10px;
+  pointer-events: none;
+  min-width: 20px;
+  text-align: center;
+  border: 1px solid var(--background-primary);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.timeline-emoji-stack {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
   margin-top: 4px;
   pointer-events: none;
+}
+
+.timeline-task-emoji {
+  font-size: 1.2em;
+  pointer-events: none;
   user-select: none;
+  line-height: 1;
 }
 
 .timeline-tooltip {
@@ -297,6 +335,20 @@
   overflow-wrap: break-word;
 }
 
+.timeline-tooltip-content.timeline-tooltip-stacked {
+  margin-top: 8px;
+  border-top: 2px solid var(--background-modifier-border-hover);
+}
+
+.timeline-tooltip-time {
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--interactive-accent);
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
 .timeline-tooltip::after {
   content: '';
   position: absolute;
@@ -310,7 +362,6 @@
 .timeline-tooltip-task {
   font-weight: 500;
   color: var(--text-normal);
-  margin-bottom: 8px;
   word-wrap: break-word;
   overflow-wrap: break-word;
   white-space: normal;
@@ -318,7 +369,7 @@
 }
 
 .timeline-tooltip-subitems {
-  margin: 0;
+  margin: 8px 0 0 0;
   padding-left: 20px;
   list-style: disc;
 }

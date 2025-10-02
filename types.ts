@@ -21,6 +21,12 @@ export interface TagStylePreset {
   emoji: string;
 }
 
+export interface GroupedTask {
+  tasks: TaskItem[];
+  position: number;
+  averageTime: string;
+}
+
 export interface TimelineSettings {
   dailyNotesFolder: string;
   dateFormat: string;
