@@ -1243,7 +1243,7 @@ export class TimelineView extends ItemView {
     rangeContainer.style.left = `${startPercentage}%`;
     rangeContainer.style.width = `${widthPercentage}%`;
 
-    const verticalOffset = overlap.overlapLevel === 0 ? 0 : overlap.overlapLevel * 30;
+    const verticalOffset = overlap.overlapLevel === 0 ? 0 : overlap.overlapLevel * 15;
     rangeContainer.style.bottom = `calc(40% + ${verticalOffset}px)`;
     rangeContainer.setAttribute("data-overlap-level", String(overlap.overlapLevel));
 
