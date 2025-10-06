@@ -1769,7 +1769,7 @@ var CodeblockConfigParser = class {
 
 // embedded-timeline.ts
 var ZOOM_CONFIG2 = {
-  MIN: 0.7,
+  MIN: 0.5,
   MAX: 10,
   DEFAULT: 1,
   STEP: 0.5,
