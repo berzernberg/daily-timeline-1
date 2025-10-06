@@ -6,7 +6,7 @@ import { OverlapDetector } from "./overlap-detection";
 export const VIEW_TYPE_TIMELINE = "daily-notes-timeline";
 
 const ZOOM_CONFIG = {
-  MIN: 0.7,
+  MIN: 0.5,
   MAX: 10.0,
   DEFAULT: 1.0,
   STEP: 0.5,
