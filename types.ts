@@ -8,6 +8,10 @@ export interface TaskItem {
   minute: number;
   firstTag?: string;
   hasAttachment?: boolean;
+  isTimeRange?: boolean;
+  timeEnd?: string;
+  endHour?: number;
+  endMinute?: number;
 }
 
 export interface DailyNote {
@@ -26,6 +30,11 @@ export interface GroupedTask {
   tasks: TaskItem[];
   position: number;
   averageTime: string;
+}
+
+export interface TimeRangeOverlap {
+  task: TaskItem;
+  overlapLevel: number;
 }
 
 export type ViewMode = "month" | "custom";

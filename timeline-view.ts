@@ -1,6 +1,7 @@
 import { ItemView, WorkspaceLeaf } from "obsidian";
 import DailyNotesTimelinePlugin from "./main";
-import { DailyNote, TaskItem, GroupedTask, ViewMode, QuickRangePreset } from "./types";
+import { DailyNote, TaskItem, GroupedTask, ViewMode, QuickRangePreset, TimeRangeOverlap } from "./types";
+import { OverlapDetector } from "./overlap-detection";
 
 export const VIEW_TYPE_TIMELINE = "daily-notes-timeline";
 
@@ -699,7 +700,8 @@ export class TimelineView extends ItemView {
       return tasks;
     }
 
-    const sortedTasks = [...tasks].sort((a, b) => {
+    const pointTasks = tasks.filter(t => !t.isTimeRange);
+    const sortedTasks = [...pointTasks].sort((a, b) => {
       const aMinutes = a.hour * 60 + a.minute;
       const bMinutes = b.hour * 60 + b.minute;
       return aMinutes - bMinutes;
@@ -809,6 +811,11 @@ export class TimelineView extends ItemView {
       } else {
         await this.renderTaskInSegment(segment, item as TaskItem);
       }
+    }
+
+    const overlaps = OverlapDetector.detectOverlaps(note.tasks);
+    for (const overlap of overlaps) {
+      await this.renderTimeRangeInSegment(segment, overlap);
     }
   }
 
@@ -1111,6 +1118,118 @@ export class TimelineView extends ItemView {
       if (file) {
         await this.plugin.app.workspace.getLeaf(false).openFile(file);
       }
+    });
+  }
+
+  private async renderTimeRangeInSegment(segment: HTMLElement, overlap: TimeRangeOverlap): Promise<void> {
+    const task = overlap.task;
+    if (!task.endHour || task.endMinute === undefined) return;
+
+    const startMinutes = task.hour * 60 + task.minute;
+    const endMinutes = task.endHour * 60 + task.endMinute;
+
+    const startPercentage = Math.min((startMinutes / (24 * 60)) * 100, 96);
+    const endPercentage = Math.min((endMinutes / (24 * 60)) * 100, 100);
+    const widthPercentage = endPercentage - startPercentage;
+
+    const rangeContainer = segment.createDiv({ cls: "timeline-range-container" });
+    rangeContainer.style.left = `${startPercentage}%`;
+    rangeContainer.style.width = `${widthPercentage}%`;
+
+    const verticalOffset = overlap.overlapLevel === 0 ? 0 : overlap.overlapLevel * 40;
+    rangeContainer.style.bottom = `calc(50% + ${verticalOffset}px)`;
+    rangeContainer.setAttribute("data-overlap-level", String(overlap.overlapLevel));
+
+    const rangeLine = rangeContainer.createDiv({ cls: "timeline-range-line" });
+    rangeLine.setAttribute("data-status", task.status);
+
+    const tagStyle = this.getTagStyle(task.firstTag);
+    if (tagStyle && tagStyle.color) {
+      rangeLine.addClass("timeline-range-line-custom");
+      rangeLine.style.setProperty("background-color", tagStyle.color, "important");
+    }
+
+    const rangeLabel = rangeLine.createDiv({ cls: "timeline-range-label" });
+    rangeLabel.setText(`${task.time} - ${task.timeEnd}`);
+
+    const emojiContainer = rangeContainer.createDiv({ cls: "timeline-range-emoji" });
+    if (tagStyle && tagStyle.emoji) {
+      const emojiEl = emojiContainer.createDiv({ cls: "timeline-task-emoji" });
+      emojiEl.setText(tagStyle.emoji);
+    } else if (task.hasAttachment) {
+      const emojiEl = emojiContainer.createDiv({ cls: "timeline-task-emoji" });
+      emojiEl.setText("📸");
+    }
+
+    const tooltip = document.body.createDiv({ cls: "timeline-tooltip" });
+    this.tooltips.push(tooltip);
+    const tooltipContent = tooltip.createDiv({ cls: "timeline-tooltip-content" });
+
+    const timeHeader = tooltipContent.createDiv({ cls: "timeline-tooltip-time" });
+    if (tagStyle && tagStyle.emoji) {
+      const emojiSpan = timeHeader.createSpan({ cls: "timeline-tooltip-time-emoji" });
+      emojiSpan.setText(tagStyle.emoji);
+    }
+    const timeText = timeHeader.createSpan();
+    timeText.setText(`${task.time} - ${task.timeEnd}`);
+
+    const taskText = tooltipContent.createDiv({ cls: "timeline-tooltip-task" });
+    taskText.textContent = `[${task.status}] `;
+
+    await this.renderTaskContent(taskText, task.content);
+
+    if (task.subItems.length > 0) {
+      const subList = tooltipContent.createEl("ul", { cls: "timeline-tooltip-subitems" });
+      for (const subItem of task.subItems) {
+        const listItem = subList.createEl("li");
+        await this.renderTaskContent(listItem, subItem);
+      }
+    }
+
+    rangeContainer.addEventListener("mouseenter", () => {
+      const rect = rangeContainer.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+
+      let tooltipTop = rect.bottom + 12;
+
+      setTimeout(() => {
+        const tooltipHeight = tooltip.offsetHeight;
+
+        if (tooltipTop + tooltipHeight > viewportHeight - 20) {
+          tooltipTop = rect.top - tooltipHeight - 12;
+          tooltip.addClass("tooltip-above");
+          if (tooltipTop < 20) {
+            tooltipTop = 20;
+          }
+        } else {
+          tooltip.removeClass("tooltip-above");
+        }
+
+        tooltip.style.top = `${tooltipTop}px`;
+      }, 0);
+
+      tooltip.style.top = `${tooltipTop}px`;
+      tooltip.style.left = `${rect.left + rect.width / 2}px`;
+      tooltip.style.transform = "translateX(-50%)";
+      tooltip.addClass("is-visible");
+      rangeContainer.addClass("is-hovered");
+    });
+
+    rangeContainer.addEventListener("mouseleave", () => {
+      tooltip.removeClass("is-visible");
+      tooltip.removeClass("tooltip-above");
+      rangeContainer.removeClass("is-hovered");
+    });
+
+    tooltip.addEventListener("mouseenter", () => {
+      tooltip.addClass("is-visible");
+      rangeContainer.addClass("is-hovered");
+    });
+
+    tooltip.addEventListener("mouseleave", () => {
+      tooltip.removeClass("is-visible");
+      tooltip.removeClass("tooltip-above");
+      rangeContainer.removeClass("is-hovered");
     });
   }
 

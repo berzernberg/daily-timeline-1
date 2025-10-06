@@ -132,7 +132,7 @@ export class DailyNotesParser {
     const tasks: TaskItem[] = [];
     let currentTask: TaskItem | null = null;
 
-    const taskRegex = /^- \[([^\]]+)\]\s+\*(\d{2}:\d{2})\*\s+(.+)$/;
+    const taskRegex = /^- \[([^\]]+)\]\s+\*(\d{2}:\d{2})(?:-(\d{2}:\d{2}))?\*\s+(.+)$/;
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
@@ -144,13 +144,21 @@ export class DailyNotesParser {
           tasks.push(currentTask);
         }
 
-        const [, status, time, content] = match;
-        const [hour, minute] = time.split(":").map(Number);
+        const [, status, timeStart, timeEnd, content] = match;
+        const [hour, minute] = timeStart.split(":").map(Number);
         const firstTag = this.extractFirstTag(content);
+
+        const isTimeRange = !!timeEnd;
+        let endHour: number | undefined;
+        let endMinute: number | undefined;
+
+        if (isTimeRange && timeEnd) {
+          [endHour, endMinute] = timeEnd.split(":").map(Number);
+        }
 
         currentTask = {
           status: status,
-          time: time,
+          time: timeStart,
           content: content.trim(),
           subItems: [],
           date: this.extractDateFromFilename(file.name, "YYYY-MM-DD") || "",
@@ -158,6 +166,10 @@ export class DailyNotesParser {
           minute: minute,
           firstTag: firstTag,
           hasAttachment: false,
+          isTimeRange: isTimeRange,
+          timeEnd: timeEnd,
+          endHour: endHour,
+          endMinute: endMinute,
         };
       } else if (currentTask && line.trim().startsWith("-") && line.includes("\t")) {
         currentTask.subItems.push(line.trim().substring(1).trim());
