@@ -980,12 +980,29 @@
 
 .timeline-range-label {
   font-size: 0.7em;
-  color: var(--text-on-accent);
   white-space: nowrap;
   font-weight: 600;
   pointer-events: none;
+}
+
+.timeline-range-label-inside {
+  color: var(--text-on-accent);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   padding: 0 4px;
+}
+
+.timeline-range-label-outside {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 4px;
+  color: var(--text-muted);
+  background: var(--background-secondary);
+  padding: 3px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--background-modifier-border);
+  z-index: 10;
 }
 
 .timeline-range-emoji {

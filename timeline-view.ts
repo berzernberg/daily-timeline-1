@@ -815,7 +815,7 @@ export class TimelineView extends ItemView {
 
     const overlaps = OverlapDetector.detectOverlaps(note.tasks);
     for (const overlap of overlaps) {
-      await this.renderTimeRangeInSegment(segment, overlap);
+      await this.renderTimeRangeInSegment(segment, overlap, segmentWidth);
     }
   }
 
@@ -1121,7 +1121,7 @@ export class TimelineView extends ItemView {
     });
   }
 
-  private async renderTimeRangeInSegment(segment: HTMLElement, overlap: TimeRangeOverlap): Promise<void> {
+  private async renderTimeRangeInSegment(segment: HTMLElement, overlap: TimeRangeOverlap, segmentWidth: number): Promise<void> {
     const task = overlap.task;
     if (!task.endHour || task.endMinute === undefined) return;
 
@@ -1149,8 +1149,19 @@ export class TimelineView extends ItemView {
       rangeLine.style.setProperty("background-color", tagStyle.color, "important");
     }
 
-    const rangeLabel = rangeLine.createDiv({ cls: "timeline-range-label" });
-    rangeLabel.setText(`${task.time} - ${task.timeEnd}`);
+    const rangeWidthPixels = (widthPercentage / 100) * segmentWidth;
+    const labelText = `${task.time} - ${task.timeEnd}`;
+    const estimatedLabelWidth = labelText.length * 6;
+    const canFitInsideLine = rangeWidthPixels >= estimatedLabelWidth + 10;
+
+    let rangeLabel: HTMLElement;
+    if (canFitInsideLine) {
+      rangeLabel = rangeLine.createDiv({ cls: "timeline-range-label timeline-range-label-inside" });
+      rangeLabel.setText(labelText);
+    } else {
+      rangeLabel = rangeContainer.createDiv({ cls: "timeline-range-label timeline-range-label-outside" });
+      rangeLabel.setText(labelText);
+    }
 
     const emojiContainer = rangeContainer.createDiv({ cls: "timeline-range-emoji" });
     if (tagStyle && tagStyle.emoji) {
