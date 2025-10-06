@@ -14,31 +14,37 @@ export class OverlapDetector {
       const rangeEnd = rangeTask.endHour * 60 + rangeTask.endMinute;
 
       let overlapLevel = 0;
+      let hasPointOverlap = false;
+      let hasRangeOverlap = false;
 
       for (const pointTask of pointTasks) {
         const pointTime = pointTask.hour * 60 + pointTask.minute;
 
         if (pointTime >= rangeStart && pointTime <= rangeEnd) {
-          overlapLevel = 1;
+          hasPointOverlap = true;
           break;
         }
       }
 
-      if (overlapLevel === 0) {
-        for (const otherRange of timeRangeTasks) {
-          if (otherRange === rangeTask) continue;
-          if (!otherRange.endHour || otherRange.endMinute === undefined) continue;
+      for (const otherRange of timeRangeTasks) {
+        if (otherRange === rangeTask) continue;
+        if (!otherRange.endHour || otherRange.endMinute === undefined) continue;
 
-          const otherStart = otherRange.hour * 60 + otherRange.minute;
-          const otherEnd = otherRange.endHour * 60 + otherRange.endMinute;
+        const otherStart = otherRange.hour * 60 + otherRange.minute;
+        const otherEnd = otherRange.endHour * 60 + otherRange.endMinute;
 
-          const hasOverlap = this.rangesOverlap(rangeStart, rangeEnd, otherStart, otherEnd);
+        const hasOverlap = this.rangesOverlap(rangeStart, rangeEnd, otherStart, otherEnd);
 
-          if (hasOverlap) {
-            overlapLevel = 1;
-            break;
-          }
+        if (hasOverlap) {
+          hasRangeOverlap = true;
+          break;
         }
+      }
+
+      if (hasPointOverlap && !hasRangeOverlap) {
+        overlapLevel = 0;
+      } else if (hasRangeOverlap) {
+        overlapLevel = 1;
       }
 
       overlaps.push({

@@ -13,6 +13,8 @@ const ZOOM_CONFIG = {
   BASE_SEGMENT_WIDTH: 200,
 };
 
+const DOT_THRESHOLD_WIDTH = 14;
+
 export class TimelineView extends ItemView {
   plugin: DailyNotesTimelinePlugin;
   private contentEl: HTMLElement;
@@ -1121,6 +1123,102 @@ export class TimelineView extends ItemView {
     });
   }
 
+  private async renderTimeRangeAsDot(segment: HTMLElement, task: TaskItem, percentage: number, tagStyle: any): Promise<void> {
+    const taskDotContainer = segment.createDiv({ cls: "timeline-task-dot-container timeline-range-as-dot" });
+    taskDotContainer.style.left = `${percentage}%`;
+
+    const taskDot = taskDotContainer.createDiv({ cls: "timeline-task-dot" });
+    taskDot.setAttribute("data-status", task.status);
+
+    if (tagStyle && tagStyle.color) {
+      taskDot.addClass("timeline-task-dot-custom");
+      taskDot.style.setProperty("background-color", tagStyle.color, "important");
+    }
+
+    const taskLabel = taskDot.createDiv({ cls: "timeline-task-label" });
+    taskLabel.setText(`${task.time} - ${task.timeEnd}`);
+
+    const emojiContainer = taskDotContainer.createDiv({ cls: "timeline-emoji-stack" });
+    if (tagStyle && tagStyle.emoji) {
+      const emojiEl = emojiContainer.createDiv({ cls: "timeline-task-emoji" });
+      emojiEl.setText(tagStyle.emoji);
+    } else if (task.hasAttachment) {
+      const emojiEl = emojiContainer.createDiv({ cls: "timeline-task-emoji" });
+      emojiEl.setText("📸");
+    }
+
+    const tooltip = document.body.createDiv({ cls: "timeline-tooltip" });
+    this.tooltips.push(tooltip);
+    const tooltipContent = tooltip.createDiv({ cls: "timeline-tooltip-content" });
+
+    const timeHeader = tooltipContent.createDiv({ cls: "timeline-tooltip-time" });
+    if (tagStyle && tagStyle.emoji) {
+      const emojiSpan = timeHeader.createSpan({ cls: "timeline-tooltip-time-emoji" });
+      emojiSpan.setText(tagStyle.emoji);
+    }
+    const timeText = timeHeader.createSpan();
+    timeText.setText(`${task.time} - ${task.timeEnd}`);
+
+    const taskText = tooltipContent.createDiv({ cls: "timeline-tooltip-task" });
+    taskText.textContent = `[${task.status}] `;
+
+    await this.renderTaskContent(taskText, task.content);
+
+    if (task.subItems.length > 0) {
+      const subList = tooltipContent.createEl("ul", { cls: "timeline-tooltip-subitems" });
+      for (const subItem of task.subItems) {
+        const listItem = subList.createEl("li");
+        await this.renderTaskContent(listItem, subItem);
+      }
+    }
+
+    taskDotContainer.addEventListener("mouseenter", () => {
+      const rect = taskDotContainer.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+
+      let tooltipTop = rect.bottom + 12;
+
+      setTimeout(() => {
+        const tooltipHeight = tooltip.offsetHeight;
+
+        if (tooltipTop + tooltipHeight > viewportHeight - 20) {
+          tooltipTop = rect.top - tooltipHeight - 12;
+          tooltip.addClass("tooltip-above");
+          if (tooltipTop < 20) {
+            tooltipTop = 20;
+          }
+        } else {
+          tooltip.removeClass("tooltip-above");
+        }
+
+        tooltip.style.top = `${tooltipTop}px`;
+      }, 0);
+
+      tooltip.style.top = `${tooltipTop}px`;
+      tooltip.style.left = `${rect.left + rect.width / 2}px`;
+      tooltip.style.transform = "translateX(-50%)";
+      tooltip.addClass("is-visible");
+      taskDotContainer.addClass("is-hovered");
+    });
+
+    taskDotContainer.addEventListener("mouseleave", () => {
+      tooltip.removeClass("is-visible");
+      tooltip.removeClass("tooltip-above");
+      taskDotContainer.removeClass("is-hovered");
+    });
+
+    tooltip.addEventListener("mouseenter", () => {
+      tooltip.addClass("is-visible");
+      taskDotContainer.addClass("is-hovered");
+    });
+
+    tooltip.addEventListener("mouseleave", () => {
+      tooltip.removeClass("is-visible");
+      tooltip.removeClass("tooltip-above");
+      taskDotContainer.removeClass("is-hovered");
+    });
+  }
+
   private async renderTimeRangeInSegment(segment: HTMLElement, overlap: TimeRangeOverlap, segmentWidth: number): Promise<void> {
     const task = overlap.task;
     if (!task.endHour || task.endMinute === undefined) return;
@@ -1132,27 +1230,36 @@ export class TimelineView extends ItemView {
     const endPercentage = Math.min((endMinutes / (24 * 60)) * 100, 100);
     const widthPercentage = endPercentage - startPercentage;
 
+    const rangeWidthPixels = (widthPercentage / 100) * segmentWidth;
+
+    const tagStyle = this.getTagStyle(task.firstTag);
+
+    if (rangeWidthPixels < DOT_THRESHOLD_WIDTH) {
+      await this.renderTimeRangeAsDot(segment, task, startPercentage, tagStyle);
+      return;
+    }
+
     const rangeContainer = segment.createDiv({ cls: "timeline-range-container" });
     rangeContainer.style.left = `${startPercentage}%`;
     rangeContainer.style.width = `${widthPercentage}%`;
 
-    const verticalOffset = overlap.overlapLevel === 0 ? 0 : overlap.overlapLevel * 40;
-    rangeContainer.style.bottom = `calc(50% + ${verticalOffset}px)`;
+    const verticalOffset = overlap.overlapLevel === 0 ? 0 : overlap.overlapLevel * 30;
+    rangeContainer.style.bottom = `calc(40% + ${verticalOffset}px)`;
     rangeContainer.setAttribute("data-overlap-level", String(overlap.overlapLevel));
 
     const rangeLine = rangeContainer.createDiv({ cls: "timeline-range-line" });
     rangeLine.setAttribute("data-status", task.status);
 
-    const tagStyle = this.getTagStyle(task.firstTag);
     if (tagStyle && tagStyle.color) {
       rangeLine.addClass("timeline-range-line-custom");
       rangeLine.style.setProperty("background-color", tagStyle.color, "important");
     }
 
-    const rangeWidthPixels = (widthPercentage / 100) * segmentWidth;
     const labelText = `${task.time} - ${task.timeEnd}`;
+    const hasEmoji = (tagStyle && tagStyle.emoji) || task.hasAttachment;
+    const emojiWidth = hasEmoji ? 20 : 0;
     const estimatedLabelWidth = labelText.length * 6;
-    const canFitInsideLine = rangeWidthPixels >= estimatedLabelWidth + 10;
+    const canFitInsideLine = rangeWidthPixels >= estimatedLabelWidth + emojiWidth + 10;
 
     let rangeLabel: HTMLElement;
     if (canFitInsideLine) {
@@ -1163,7 +1270,7 @@ export class TimelineView extends ItemView {
       rangeLabel.setText(labelText);
     }
 
-    const emojiContainer = rangeContainer.createDiv({ cls: "timeline-range-emoji" });
+    const emojiContainer = rangeLine.createDiv({ cls: "timeline-range-emoji" });
     if (tagStyle && tagStyle.emoji) {
       const emojiEl = emojiContainer.createDiv({ cls: "timeline-task-emoji" });
       emojiEl.setText(tagStyle.emoji);

@@ -152,7 +152,7 @@
   padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
   cursor: grab;
 }
 
@@ -168,11 +168,11 @@
 }
 
 .timeline-continuous {
-  min-height: 280px;
+  min-height: 240px;
   width: 100%;
   overflow-x: auto;
   overflow-y: visible;
-  padding-bottom: 20px;
+  padding-bottom: 12px;
   cursor: grab;
 }
 
@@ -182,7 +182,7 @@
 
 .timeline-track-continuous {
   position: relative;
-  height: 180px;
+  height: 160px;
   background: var(--background-secondary);
   border-radius: 8px;
   border: 2px solid var(--background-modifier-border);
@@ -193,7 +193,7 @@
 .timeline-track-continuous::before {
   content: '';
   position: absolute;
-  top: 50%;
+  top: 60%;
   left: 0;
   right: 0;
   height: 3px;
@@ -280,7 +280,7 @@
 
 .timeline-task-dot-container {
   position: absolute;
-  top: 50%;
+  top: 60%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -926,7 +926,7 @@
 
 .timeline-range-container {
   position: absolute;
-  height: 20px;
+  height: 16px;
   z-index: 3;
   cursor: pointer;
   transition: z-index 0s;
@@ -937,6 +937,7 @@
 }
 
 .timeline-range-container[data-overlap-level="0"] {
+  bottom: 40%;
   transform: translateY(50%);
 }
 
@@ -952,6 +953,7 @@
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: visible;
 }
 
 .timeline-range-container:hover .timeline-range-line {
@@ -989,6 +991,7 @@
   color: var(--text-on-accent);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   padding: 0 4px;
+  margin-left: 20px;
 }
 
 .timeline-range-label-outside {
@@ -1007,11 +1010,31 @@
 
 .timeline-range-emoji {
   position: absolute;
+  left: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.timeline-range-emoji .timeline-task-emoji {
+  font-size: 0.9em;
+}
+
+.timeline-range-as-dot .timeline-task-dot {
+  border: 3px solid var(--background-primary);
+}
+
+.timeline-range-as-dot .timeline-emoji-stack {
+  position: absolute;
   top: 100%;
-  left: 8px;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: 2px;
   margin-top: 4px;
   pointer-events: none;
