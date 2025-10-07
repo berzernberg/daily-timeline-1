@@ -6,7 +6,7 @@ import { OverlapDetector } from "./overlap-detection";
 export const VIEW_TYPE_TIMELINE = "daily-notes-timeline";
 
 const ZOOM_CONFIG = {
-  MIN: 0.5,
+  MIN: 0.7,
   MAX: 10.0,
   DEFAULT: 1.0,
   STEP: 0.5,
@@ -1243,7 +1243,7 @@ export class TimelineView extends ItemView {
     rangeContainer.style.left = `${startPercentage}%`;
     rangeContainer.style.width = `${widthPercentage}%`;
 
-    const verticalOffset = overlap.overlapLevel === 0 ? 0 : overlap.overlapLevel * 15;
+    const verticalOffset = overlap.overlapLevel === 0 ? 0 : overlap.overlapLevel * 30;
     rangeContainer.style.bottom = `calc(40% + ${verticalOffset}px)`;
     rangeContainer.setAttribute("data-overlap-level", String(overlap.overlapLevel));
 

@@ -42,11 +42,9 @@ export class OverlapDetector {
       }
 
       if (hasPointOverlap && !hasRangeOverlap) {
-        overlapLevel = 1;
+        overlapLevel = 0;
       } else if (hasRangeOverlap) {
         overlapLevel = 1;
-      } else {
-        overlapLevel = 0;
       }
 
       overlaps.push({
@@ -72,6 +70,8 @@ export class OverlapDetector {
 
       for (let j = 0; j < i; j++) {
         const prev = sortedOverlaps[j];
+        if (prev.overlapLevel === 0) continue;
+
         const prevStart = prev.task.hour * 60 + prev.task.minute;
         const prevEnd = (prev.task.endHour || 0) * 60 + (prev.task.endMinute || 0);
 
